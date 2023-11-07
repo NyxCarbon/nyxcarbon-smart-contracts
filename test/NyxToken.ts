@@ -46,10 +46,6 @@ describe("Token contract", function () {
 
     it("should emit Transfer events", async function () {
       const { hardhatToken, owner, addr1, addr2 } = await loadFixture(deployTokenFixture);
-      console.log(hardhatToken);
-      console.log(owner);
-      console.log(addr1);
-      console.log(addr2);
 
       // Transfer 50 tokens from owner to addr1
       await expect(hardhatToken.transfer(owner, addr1, 50, true, '0x'))

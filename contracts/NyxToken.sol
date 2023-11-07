@@ -6,6 +6,6 @@ import "@lukso/lsp-smart-contracts/contracts/LSP7DigitalAsset/extensions/LSP7Bur
 
 contract NyxToken is LSP7Mintable, LSP7Burnable {
     constructor() LSP7Mintable("NYX Token", "NYX", msg.sender, false) {
-        mint(msg.sender, 20000 * 10 ** decimals(), true, "0x");
+        mint(msg.sender, 500000 * 10 ** decimals(), true, "0x");
     }
 }
