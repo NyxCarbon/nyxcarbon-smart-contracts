@@ -2,7 +2,9 @@
 pragma solidity ^0.8.4;
 
 import {LSP7Mintable} from "@lukso/lsp-smart-contracts/contracts/LSP7DigitalAsset/presets/LSP7Mintable.sol";
+import {PaymentNotDue, ZeroBalanceOnLoan} from "./NonCollateralizedLoanErrors.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "hardhat/console.sol";
 
 contract NonCollateralizedLoan {
     using SafeMath for uint256;
@@ -114,18 +116,15 @@ contract NonCollateralizedLoan {
     function makePayment() public payable onlyInState(LoanState.Taken) {
         (transactionFee, netMonthlyPayment) = calculateMonthlyPayment();
 
-        require(block.timestamp <= dueDate, "Payment is not due yet");
-        require(
-            netMonthlyPayment <= amount,
-            "There is no balance remaining on this loan"
-        );
-        require(
-            msg.value >= netMonthlyPayment + transactionFee,
-            "The message value does not cover the monthly payment and transaction fee"
-        );
+        if (block.timestamp <= dueDate) {
+            revert PaymentNotDue(dueDate);
+        }
+
+        if (amount <= 0) {
+            revert ZeroBalanceOnLoan();
+        }
 
         amount -= netMonthlyPayment;
-        dueDate += (86400 * 30);
         token.transfer(borrower, lender, netMonthlyPayment, true, "0x");
         token.transfer(borrower, nyxCarbonAddress, transactionFee, true, "0x");
     }
