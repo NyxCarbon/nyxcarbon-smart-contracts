@@ -2,7 +2,8 @@
 pragma solidity ^0.8.4;
 
 import {LSP7Mintable} from "@lukso/lsp-smart-contracts/contracts/LSP7DigitalAsset/presets/LSP7Mintable.sol";
-import {PaymentNotDue, ZeroBalanceOnLoan} from "./NonCollateralizedLoanErrors.sol";
+import {PaymentNotDue, ZeroBalanceOnLoan, ActionNotAllowedInCurrentState} from "./NonCollateralizedLoanErrors.sol";
+import {LoanState} from "./LoanEnums.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "hardhat/console.sol";
 
@@ -11,20 +12,14 @@ contract NonCollateralizedLoan {
 
     LSP7Mintable public token;
 
-    enum LoanState {
-        Created,
-        Funded,
-        Taken,
-        Repayed,
-        Liquidated
-    }
     LoanState public loanState;
 
     address payable public lender;
     address payable public borrower;
     address payable public nyxCarbonAddress;
 
-    uint256 public amount;
+    uint256 public initialLoanAmount;
+    uint256 public currentBalance;
     uint256 public apy;
     uint256 public amortizationPeriodInMonths;
     uint256 public lockUpPeriodInMonths;
@@ -32,12 +27,13 @@ contract NonCollateralizedLoan {
 
     address payable public tokenAddress;
 
-    uint256 public transactionFee;
+    uint256[] public paymentSchedule;
+    uint256 public paymentIndex;
     uint256 public netMonthlyPayment;
-    uint256 public dueDate;
+    uint256 public transactionFee;
 
     constructor(
-        uint256 _amount,
+        uint256 _initialLoanAmount,
         uint256 _apy,
         uint256 _amortizationPeriodInMonths,
         uint256 _lockUpPeriodInMonths,
@@ -45,7 +41,7 @@ contract NonCollateralizedLoan {
         address payable _tokenAddress,
         address payable _nyxCarbonAddress
     ) {
-        amount = _amount * 1e18;
+        initialLoanAmount = _initialLoanAmount * 1e18;
         apy = _apy * 1e18;
         amortizationPeriodInMonths = _amortizationPeriodInMonths;
         lockUpPeriodInMonths = _lockUpPeriodInMonths;
@@ -57,33 +53,36 @@ contract NonCollateralizedLoan {
     }
 
     modifier onlyInState(LoanState expectedState) {
-        require(loanState == expectedState, "Not allowed in this loanState");
+        if (loanState != expectedState) {
+            revert ActionNotAllowedInCurrentState(loanState, expectedState);
+        }
         _;
     }
 
-    // Is this really necessary?!
-    modifier checkAuthorizedAmount() {
-        require(
-            token.authorizedAmountFor(address(this), msg.sender) >= amount,
-            "Contract is now authorized to send this amount of tokens"
+    function fundLoan() public payable onlyInState(LoanState.Created) {
+        token.transfer(
+            msg.sender,
+            address(this),
+            initialLoanAmount,
+            true,
+            "0x"
         );
-        _;
-    }
-
-    function fundLoan()
-        public
-        payable
-        onlyInState(LoanState.Created)
-        checkAuthorizedAmount
-    {
-        token.transfer(msg.sender, address(this), amount, true, "0x");
         loanState = LoanState.Funded;
     }
 
     function acceptLoan() public payable onlyInState(LoanState.Funded) {
         borrower = payable(msg.sender);
-        token.transfer(address(this), borrower, amount, true, "0x");
+        token.transfer(address(this), borrower, initialLoanAmount, true, "0x");
+        (transactionFee, netMonthlyPayment) = calculateMonthlyPayment();
+        currentBalance =
+            (transactionFee + netMonthlyPayment) *
+            amortizationPeriodInMonths;
         loanState = LoanState.Taken;
+    }
+
+    function setPaymentSchedule(uint256[] memory _paymentSchedule) public {
+        paymentSchedule = _paymentSchedule;
+        paymentIndex = 0;
     }
 
     function calculateMonthlyPayment()
@@ -100,7 +99,9 @@ contract NonCollateralizedLoan {
         for (uint256 i = 1; i < 3; i++) {
             intermediatePower = (intermediatePower * intermediateValue) / 1e18;
         }
-        uint256 grossMonthlyPayment = (amount * intermediatePower) / 1e36 / 36;
+        uint256 grossMonthlyPayment = (initialLoanAmount * intermediatePower) /
+            1e36 /
+            amortizationPeriodInMonths;
 
         uint256 calculatedTransactionFee = (grossMonthlyPayment *
             (transactionPercentage)) / 1e3;
@@ -114,18 +115,22 @@ contract NonCollateralizedLoan {
     }
 
     function makePayment() public payable onlyInState(LoanState.Taken) {
-        (transactionFee, netMonthlyPayment) = calculateMonthlyPayment();
-
-        if (block.timestamp <= dueDate) {
-            revert PaymentNotDue(dueDate);
-        }
-
-        if (amount <= 0) {
+        if (paymentIndex >= amortizationPeriodInMonths || currentBalance <= 0) {
             revert ZeroBalanceOnLoan();
         }
 
-        amount -= netMonthlyPayment;
+        if (block.timestamp <= paymentSchedule[paymentIndex]) {
+            revert PaymentNotDue(paymentSchedule[paymentIndex]);
+        }
+
         token.transfer(borrower, lender, netMonthlyPayment, true, "0x");
         token.transfer(borrower, nyxCarbonAddress, transactionFee, true, "0x");
+
+        currentBalance -= (netMonthlyPayment + transactionFee);
+        paymentIndex += 1;
+
+        if (paymentIndex >= amortizationPeriodInMonths || currentBalance <= 0) {
+            loanState = LoanState.Repayed;
+        }
     }
 }
