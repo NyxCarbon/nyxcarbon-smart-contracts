@@ -1,22 +1,20 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.4;
 
+import {INonCollateralizedLoan} from "./INonCollateralizedLoan.sol";
 import {LSP7Mintable} from "@lukso/lsp-smart-contracts/contracts/LSP7DigitalAsset/presets/LSP7Mintable.sol";
 import {PaymentNotDue, ZeroBalanceOnLoan, ActionNotAllowedInCurrentState} from "./NonCollateralizedLoanErrors.sol";
 import {LoanState} from "./LoanEnums.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "hardhat/console.sol";
 
-contract NonCollateralizedLoan {
-    using SafeMath for uint256;
-
+contract NonCollateralizedLoan is INonCollateralizedLoan {
     LSP7Mintable public token;
 
     LoanState public loanState;
 
+    address payable public nyxCarbonAddress;
     address payable public lender;
     address payable public borrower;
-    address payable public nyxCarbonAddress;
 
     uint256 public initialLoanAmount;
     uint256 public currentBalance;
@@ -52,6 +50,7 @@ contract NonCollateralizedLoan {
         loanState = LoanState.Created;
     }
 
+    // PERMISSIONS MODIFIERS
     modifier onlyInState(LoanState expectedState) {
         if (loanState != expectedState) {
             revert ActionNotAllowedInCurrentState(loanState, expectedState);
@@ -59,7 +58,29 @@ contract NonCollateralizedLoan {
         _;
     }
 
-    function fundLoan() public payable onlyInState(LoanState.Created) {
+    modifier onlyOwner() {
+        require(msg.sender == nyxCarbonAddress, "Not the owner");
+        _;
+    }
+
+    modifier onlyLender() {
+        require(msg.sender == lender, "Not the lender");
+        _;
+    }
+
+    modifier onlyBorrower() {
+        require(msg.sender == borrower, "Not the borrower");
+        _;
+    }
+
+    // LOAN FUNCTIONS
+    function fundLoan()
+        public
+        virtual
+        override
+        onlyLender
+        onlyInState(LoanState.Created)
+    {
         token.transfer(
             msg.sender,
             address(this),
@@ -68,16 +89,42 @@ contract NonCollateralizedLoan {
             "0x"
         );
         loanState = LoanState.Funded;
+        emit LoanFunded(
+            msg.sender,
+            lender,
+            address(this),
+            initialLoanAmount,
+            true,
+            "0x"
+        );
     }
 
-    function acceptLoan() public payable onlyInState(LoanState.Funded) {
+    function acceptLoan()
+        public
+        virtual
+        override
+        onlyInState(LoanState.Funded)
+    {
         borrower = payable(msg.sender);
+
         token.transfer(address(this), borrower, initialLoanAmount, true, "0x");
+
+        // Calculate the transaction fee and net monthly payment
         (transactionFee, netMonthlyPayment) = calculateMonthlyPayment();
         currentBalance =
             (transactionFee + netMonthlyPayment) *
             amortizationPeriodInMonths;
+
         loanState = LoanState.Taken;
+
+        emit LoanAccepted(
+            msg.sender,
+            address(this),
+            borrower,
+            initialLoanAmount,
+            true,
+            "0x"
+        );
     }
 
     function setPaymentSchedule(uint256[] memory _paymentSchedule) public {

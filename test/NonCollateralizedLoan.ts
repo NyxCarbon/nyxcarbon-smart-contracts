@@ -82,6 +82,13 @@ describe("Loan contract", function () {
       await hardhatLoan.connect(owner).fundLoan();
       expect(await hardhatLoan.loanState()).to.equal(1);
     });  
+
+    it("Should emit LoanFunded event", async function () {
+      const { hardhatLoan, owner, initialLoanAmount } = await loadFixture(deployLoanFixture);
+      expect(await hardhatLoan.connect(owner).fundLoan())
+        .to.emit(hardhatLoan, "LoanFunded")
+        .withArgs(hardhatLoan.runner.address, owner.address, hardhatLoan.runner.address, initialLoanAmount, true, '0x');
+    });
   });
 
   describe("Accept Loan", function () {
@@ -116,6 +123,15 @@ describe("Loan contract", function () {
       await hardhatLoan.connect(owner).fundLoan();
       await hardhatLoan.connect(addr1).acceptLoan();
       expect(await hardhatLoan.loanState()).to.equal(2);
+    });
+
+    it("Should emit LoanAccepted event", async function () {
+      const { hardhatLoan, owner, addr1, initialLoanAmount } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.connect(owner).fundLoan();
+
+      expect(await hardhatLoan.connect(addr1).acceptLoan())
+        .to.emit(hardhatLoan, "LoanAccepted")
+        .withArgs(hardhatLoan.runner.address, hardhatLoan.runner.address, addr1.address, initialLoanAmount, true, '0x');
     });
   });
   
