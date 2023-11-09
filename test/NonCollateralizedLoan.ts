@@ -24,7 +24,7 @@ describe("Loan contract", function () {
     const apy: bigint = BigInt(14);
     const amortizationPeriodInMonths: bigint = BigInt(36);
     const lockUpPeriodInMonths: bigint = BigInt(18);
-    const transactionPercentage: bigint = BigInt(8)
+    const transactionPercentage: bigint = BigInt(8);
 
     const hardhatLoan = await Loan.deploy(
       initialLoanAmount,
@@ -33,7 +33,7 @@ describe("Loan contract", function () {
       lockUpPeriodInMonths,
       transactionPercentage,
       hardhatToken.target as string,
-      UP_ADDR as string
+      addr1
     );
     await hardhatLoan.waitForDeployment();
 
@@ -44,14 +44,21 @@ describe("Loan contract", function () {
     // Authorize operator to transfer tokens 1M for addr1
     await hardhatToken.connect(addr1).revokeOperator(hardhatLoan.target, "0x");
     await hardhatToken.connect(addr1).authorizeOperator(hardhatLoan.target, BigInt(1000000) * BigInt(1e18), "0x");
-    
+
+    // Authorize operator to transfer tokens 1M for addr2
+    await hardhatToken.connect(addr2).revokeOperator(hardhatLoan.target, "0x");
+    await hardhatToken.connect(addr2).authorizeOperator(hardhatLoan.target, BigInt(1000000) * BigInt(1e18), "0x");
+
+    // Mint additional 1M tokens for addr1 for funding loan
+    await hardhatToken.mint(addr1.address, BigInt(500000) * BigInt(1e18), true, "0x");
+
     return { Loan, hardhatLoan, Token, hardhatToken, owner, addr1, addr2, initialLoanAmount, apy, lockUpPeriodInMonths, transactionPercentage };
   }
 
   describe("Deployment", function () {
     it("Should set the creator as lender", async function () {
-      const { hardhatLoan, owner } = await loadFixture(deployLoanFixture);
-      expect(await hardhatLoan.lender()).to.equal(owner.address);
+      const { hardhatLoan, addr1 } = await loadFixture(deployLoanFixture);
+      expect(await hardhatLoan.lender()).to.equal(addr1.address);
     });
 
     it("Should set the status of the loan as Created", async function () {
@@ -64,52 +71,65 @@ describe("Loan contract", function () {
       expect(await hardhatLoan.initialLoanAmount() / BigInt(1e18)).to.equal(initialLoanAmount);
     });
 
-    it("Should set the nyxCarbon address as nyxCarbonAddress", async function () {
-      const { hardhatLoan } = await loadFixture(deployLoanFixture);
-      expect(await hardhatLoan.nyxCarbonAddress()).to.equal(UP_ADDR);
+    it("Should set the msg.sender as the owner", async function () {
+      const { hardhatLoan, owner } = await loadFixture(deployLoanFixture);
+      expect(await hardhatLoan.owner()).to.equal(owner.address);
+    });
+  });
+  
+  describe("Set Borrower", function () {
+    it("Should allow the owner to set the borrower", async function () {
+      const { hardhatLoan, addr2 } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.setBorrower(addr2);
+      expect(await hardhatLoan.borrower()).to.equal(addr2.address);
+    });
+  
+    it("Should prevent users who are not the owner from setting borrower", async function () {
+      const { hardhatLoan, addr2 } = await loadFixture(deployLoanFixture);
+      await expect(hardhatLoan.connect(addr2).setBorrower(addr2)).revertedWithCustomError(hardhatLoan, 'Unauthorized').withArgs(addr2.address);
     });
   });
 
   describe("Fund Loan", function () {
     it("Should transfer the initialLoanAmount to the contract", async function () {
-      const { hardhatLoan, hardhatToken, owner, initialLoanAmount } = await loadFixture(deployLoanFixture);
-      await hardhatLoan.connect(owner).fundLoan();
+      const { hardhatLoan, hardhatToken, addr1, initialLoanAmount } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.connect(addr1).fundLoan();
       expect(await hardhatToken.balanceOf(hardhatLoan.target) / BigInt(1e18)).to.equal(initialLoanAmount);
     });
 
     it("Should set the status of the loan as Funded", async function () {
-      const { hardhatLoan, owner } = await loadFixture(deployLoanFixture);
-      await hardhatLoan.connect(owner).fundLoan();
+      const { hardhatLoan, addr1 } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.connect(addr1).fundLoan();
       expect(await hardhatLoan.loanState()).to.equal(1);
-    });  
+    });
 
     it("Should emit LoanFunded event", async function () {
-      const { hardhatLoan, owner, initialLoanAmount } = await loadFixture(deployLoanFixture);
-      expect(await hardhatLoan.connect(owner).fundLoan())
+      const { hardhatLoan, owner, addr1, initialLoanAmount } = await loadFixture(deployLoanFixture);
+      expect(await hardhatLoan.connect(addr1).fundLoan())
         .to.emit(hardhatLoan, "LoanFunded")
-        .withArgs(hardhatLoan.runner.address, owner.address, hardhatLoan.runner.address, initialLoanAmount, true, '0x');
+        .withArgs(owner.address, owner.address, owner.address, initialLoanAmount, true, '0x');
+    });
+
+    it("Should only allow the lender to fund the loan", async function () {
+      const { hardhatLoan, owner } = await loadFixture(deployLoanFixture);
+      await expect(hardhatLoan.connect(owner).fundLoan()).to.be.revertedWithCustomError(hardhatLoan, 'Unauthorized').withArgs(owner.address);
     });
   });
 
   describe("Accept Loan", function () {
-    it("Should set addr1 as the borrower", async function () {
-      const { hardhatLoan, owner, addr1 } = await loadFixture(deployLoanFixture);
-      await hardhatLoan.connect(owner).fundLoan();
-      await hardhatLoan.connect(addr1).acceptLoan();
-      expect(await hardhatLoan.borrower()).to.equal(addr1.address);
+    it("Should transfer the balance to addr1", async function () {
+      const { hardhatLoan, hardhatToken, addr1, addr2, initialLoanAmount } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.connect(addr1).fundLoan();
+      await hardhatLoan.setBorrower(addr2);
+      await hardhatLoan.connect(addr2).acceptLoan();
+      expect(await hardhatToken.balanceOf(addr2.address) / BigInt(1e18)).to.equal(initialLoanAmount);
     });
 
-    it("Should transfer the balance to addr1", async function () {
-      const { hardhatLoan, hardhatToken, owner, addr1, initialLoanAmount } = await loadFixture(deployLoanFixture);
-      await hardhatLoan.connect(owner).fundLoan();
-      await hardhatLoan.connect(addr1).acceptLoan();
-      expect(await hardhatToken.balanceOf(addr1.address) / BigInt(1e18)).to.equal(initialLoanAmount);
-    });  
-
     it("Should calculate balance (loan + interest)", async function () {
-      const { hardhatLoan, owner, addr1, initialLoanAmount, apy, transactionPercentage } = await loadFixture(deployLoanFixture);
-      await hardhatLoan.connect(owner).fundLoan();
-      await hardhatLoan.connect(addr1).acceptLoan();
+      const { hardhatLoan, addr1, addr2, initialLoanAmount, apy, transactionPercentage } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.connect(addr1).fundLoan();
+      await hardhatLoan.setBorrower(addr2);
+      await hardhatLoan.connect(addr2).acceptLoan();
       
       const offChainGrossMonthlyPayment = (Number(initialLoanAmount) * ((1 + ((Number(apy) / 100) / 1)) ** 3)) / 36;
       const offChainTransactionFee = offChainGrossMonthlyPayment * (Number(transactionPercentage) / 1000);
@@ -119,110 +139,117 @@ describe("Loan contract", function () {
     });
     
     it("Should set the loan state to Taken", async function () {
-      const { hardhatLoan, owner, addr1 } = await loadFixture(deployLoanFixture);
-      await hardhatLoan.connect(owner).fundLoan();
-      await hardhatLoan.connect(addr1).acceptLoan();
+      const { hardhatLoan, addr1, addr2 } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.connect(addr1).fundLoan();
+      await hardhatLoan.setBorrower(addr2);
+      await hardhatLoan.connect(addr2).acceptLoan();
       expect(await hardhatLoan.loanState()).to.equal(2);
     });
 
     it("Should emit LoanAccepted event", async function () {
-      const { hardhatLoan, owner, addr1, initialLoanAmount } = await loadFixture(deployLoanFixture);
-      await hardhatLoan.connect(owner).fundLoan();
+      const { hardhatLoan, addr1, addr2, initialLoanAmount } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.connect(addr1).fundLoan();
+      await hardhatLoan.setBorrower(addr2);
 
-      expect(await hardhatLoan.connect(addr1).acceptLoan())
+      expect(await hardhatLoan.connect(addr2).acceptLoan())
         .to.emit(hardhatLoan, "LoanAccepted")
-        .withArgs(hardhatLoan.runner.address, hardhatLoan.runner.address, addr1.address, initialLoanAmount, true, '0x');
+        .withArgs(addr2.address, addr2.address, addr1.address, initialLoanAmount, true, '0x');
+    });
+
+    it("Should only allow the borrower to accept the loan", async function () {
+      const { hardhatLoan, addr1, addr2 } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.connect(addr1).fundLoan();
+      await hardhatLoan.setBorrower(addr2);
+      await expect(hardhatLoan.connect(addr1).acceptLoan()).to.be.revertedWithCustomError(hardhatLoan, 'Unauthorized').withArgs(addr1.address);
     });
   });
   
   describe("Set schedule", function () {
     it("Should set the schedule and due date index", async function () {
-      const { hardhatLoan, owner, addr1 } = await loadFixture(deployLoanFixture);
-      await hardhatLoan.connect(owner).fundLoan();
-      await hardhatLoan.connect(addr1).acceptLoan();
+      const { hardhatLoan, addr1, addr2 } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.connect(addr1).fundLoan();
+      await hardhatLoan.setBorrower(addr2);
+      await hardhatLoan.connect(addr2).acceptLoan();
       await hardhatLoan.setPaymentSchedule(generateEpochTimestamps());
       expect(await hardhatLoan.paymentIndex()).to.equal(0);
       expect(await hardhatLoan.paymentSchedule(3)).to.equal(generateEpochTimestamps()[3]);
     });
-  });
 
-  describe("Calculate monthly payment & transaction fee", function () {
-    it("Should properly calculate monthly payment & transaction fee", async function () {
-      const { hardhatLoan, owner, addr1, initialLoanAmount, apy, transactionPercentage } = await loadFixture(deployLoanFixture);
-      await hardhatLoan.connect(owner).fundLoan();
-      await hardhatLoan.connect(addr1).acceptLoan();
-      const offChainGrossMonthlyPayment = (Number(initialLoanAmount) * ((1 + ((Number(apy) / 100) / 1)) ** 3)) / 36;
-      const offChainTransactionFee = offChainGrossMonthlyPayment * (Number(transactionPercentage) / 1000);
-      const offChainNetMonthlyPayment = offChainGrossMonthlyPayment - offChainTransactionFee;
-      const [ calculatedTransactionFee, calculatedNetMonthlyPayment ] = await hardhatLoan.calculateMonthlyPayment();
-
-      expect(calculatedTransactionFee / BigInt(1e18)).to.equal(BigInt(Math.round(offChainTransactionFee) - 1));
-      expect(calculatedNetMonthlyPayment / BigInt(1e18)).to.equal(BigInt(Math.round(offChainNetMonthlyPayment) + 1));
+    it("Should prevent any user besides the owner to set payment schedule", async function () {
+      const { hardhatLoan, addr1, addr2 } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.connect(addr1).fundLoan();
+      await hardhatLoan.setBorrower(addr2);
+      await hardhatLoan.connect(addr2).acceptLoan();
+      await expect(hardhatLoan.connect(addr1).setPaymentSchedule(generateEpochTimestamps())).to.be.revertedWithCustomError(hardhatLoan, 'Unauthorized').withArgs(addr1.address);
     });
   });
 
   describe("Make Payment", function () {
     it("Should prevent borrower from making a payment because loan is not due yet", async function () {
-        const { hardhatLoan, owner, addr1 } = await loadFixture(deployLoanFixture);
-        await hardhatLoan.connect(owner).fundLoan();
-        await hardhatLoan.connect(addr1).acceptLoan();
+        const { hardhatLoan, addr1, addr2 } = await loadFixture(deployLoanFixture);
+        await hardhatLoan.connect(addr1).fundLoan();
+        await hardhatLoan.setBorrower(addr2);
+        await hardhatLoan.connect(addr2).acceptLoan();
 
         // Set payment schedule to begin on 05.05.2025 
         await hardhatLoan.setPaymentSchedule(generateEpochTimestamps());
-        await expect(hardhatLoan.connect(addr1).makePayment()).to.be.revertedWithCustomError(hardhatLoan, "PaymentNotDue");
+        await expect(hardhatLoan.connect(addr2).makePayment()).to.be.revertedWithCustomError(hardhatLoan, "PaymentNotDue");
     });
 
     it("Should not throw a zero balance error because the loan still has a balance", async function () {
-      const { hardhatLoan, owner, addr1 } = await loadFixture(deployLoanFixture);
-      await hardhatLoan.connect(owner).fundLoan();
-      await hardhatLoan.connect(addr1).acceptLoan();
+      const { hardhatLoan, addr1, addr2 } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.connect(addr1).fundLoan();
+      await hardhatLoan.setBorrower(addr2);
+      await hardhatLoan.connect(addr2).acceptLoan();
       await hardhatLoan.setPaymentSchedule(generateEpochTimestamps());
-      await expect(hardhatLoan.connect(addr1).makePayment()).to.not.be.revertedWithCustomError(hardhatLoan, "ZeroBalanceOnLoan");
+      await expect(hardhatLoan.connect(addr2).makePayment()).to.not.be.revertedWithCustomError(hardhatLoan, "ZeroBalanceOnLoan");
     });
 
     it("Should allow borrower to transfer tokens to the lender (i.e., make a payment)", async function () {
-      const { hardhatToken, hardhatLoan, owner, addr1, initialLoanAmount, apy, transactionPercentage } = await loadFixture(deployLoanFixture);
-      await hardhatLoan.connect(owner).fundLoan();
-      await hardhatLoan.connect(addr1).acceptLoan();
+      const { hardhatToken, hardhatLoan, owner, addr1, addr2, initialLoanAmount, apy, transactionPercentage } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.connect(addr1).fundLoan();
+      await hardhatLoan.setBorrower(addr2);
+      await hardhatLoan.connect(addr2).acceptLoan();
       await hardhatLoan.setPaymentSchedule(generateEpochTimestamps(new Date('2022-05-08')));
-      await hardhatLoan.connect(addr1).makePayment();
+      await hardhatLoan.connect(addr2).makePayment();
+
+      // Transfer 500k tokens from owner to addr2 to account for profits to pay back loan + interest and to force owner balance to be 0
+      await hardhatToken.transfer(owner, addr2, BigInt(500000) * BigInt(1e18), true, "0x");
       
       // Offchain calculations
       const offChainGrossMonthlyPayment = (Number(initialLoanAmount) * ((1 + ((Number(apy) / 100) / 1)) ** 3)) / 36;
       const offChainTransactionFee = offChainGrossMonthlyPayment * (Number(transactionPercentage) / 1000);
       const offChainNetMonthlyPayment = offChainGrossMonthlyPayment - offChainTransactionFee;
 
-      expect(await hardhatToken.balanceOf(UP_ADDR as string) / BigInt(1e18)).to.equal(BigInt(Math.round(offChainTransactionFee) - 1));
-      expect(await hardhatToken.balanceOf(owner.address) / BigInt(1e18)).to.equal(BigInt(Math.round(offChainNetMonthlyPayment) + 1));
+      expect(await hardhatToken.balanceOf(owner) / BigInt(1e18)).to.equal(BigInt(Math.round(offChainTransactionFee) - 1));
+      expect(await hardhatToken.balanceOf(addr1) / BigInt(1e18)).to.equal(BigInt(Math.round(offChainNetMonthlyPayment) + 1));
       expect(await hardhatLoan.currentBalance() / BigInt(1e18)).to.equal(BigInt(Math.round((offChainTransactionFee + offChainNetMonthlyPayment) * 35)))
       expect(await hardhatLoan.paymentIndex()).to.equal(1);
     });
 
     it("Should prevent user from making payment once current balance is 0", async function () {
-      const { hardhatToken, hardhatLoan, owner, addr1 } = await loadFixture(deployLoanFixture);
-      await hardhatLoan.connect(owner).fundLoan();
-      await hardhatLoan.connect(addr1).acceptLoan();
+      const { hardhatToken, hardhatLoan, owner, addr1, addr2 } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.connect(addr1).fundLoan();
+      await hardhatLoan.setBorrower(addr2);
+      await hardhatLoan.connect(addr2).acceptLoan();
       const paymentSchedule = generateEpochTimestamps(new Date('2022-05-08'));
       await hardhatLoan.setPaymentSchedule(paymentSchedule);
 
-      // Mint additional .5M tokens for addr1 to account for profits off-chain
-      hardhatToken.mint(addr1.address, BigInt(500000) * BigInt(1e18), true, "0x");
+      // Transfer 500k tokens from owner to addr2 to account for profits to pay back loan + interest and to force owner balance to be 0
+      await hardhatToken.transfer(owner, addr2, BigInt(500000) * BigInt(1e18), true, "0x");
 
       // Move time forward and pay off loan
-      await hardhatLoan.connect(addr1).makePayment();
+      await hardhatLoan.connect(addr2).makePayment();
       try {
         for (let i = 1; i < 36; i++) {
           await time.increaseTo(paymentSchedule[i]);
-          await hardhatLoan.connect(addr1).makePayment();
+          await hardhatLoan.connect(addr2).makePayment();
         }
       } catch (error) {
         console.error(error);
       }
 
-      // // First time calling makePayment() on loan with a zero balance should revert ZeroBalanceOnLoan
-      // await expect(hardhatLoan.connect(addr1).makePayment()).to.be.revertedWithCustomError(hardhatLoan, "ZeroBalanceOnLoan");
-
-      await expect(hardhatLoan.connect(addr1).makePayment()).to.be.revertedWithCustomError(hardhatLoan, "ActionNotAllowedInCurrentState");
+      await expect(hardhatLoan.connect(addr2).makePayment()).to.be.revertedWithCustomError(hardhatLoan, "ActionNotAllowedInCurrentState");
     });
   });
 });

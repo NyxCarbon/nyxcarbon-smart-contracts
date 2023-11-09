@@ -3,7 +3,7 @@ pragma solidity ^0.8.4;
 
 import {INonCollateralizedLoan} from "./INonCollateralizedLoan.sol";
 import {LSP7Mintable} from "@lukso/lsp-smart-contracts/contracts/LSP7DigitalAsset/presets/LSP7Mintable.sol";
-import {PaymentNotDue, ZeroBalanceOnLoan, ActionNotAllowedInCurrentState} from "./NonCollateralizedLoanErrors.sol";
+import {PaymentNotDue, ZeroBalanceOnLoan, ActionNotAllowedInCurrentState, Unauthorized} from "./NonCollateralizedLoanErrors.sol";
 import {LoanState} from "./LoanEnums.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
@@ -12,7 +12,7 @@ contract NonCollateralizedLoan is INonCollateralizedLoan {
 
     LoanState public loanState;
 
-    address payable public nyxCarbonAddress;
+    address payable public owner;
     address payable public lender;
     address payable public borrower;
 
@@ -37,7 +37,7 @@ contract NonCollateralizedLoan is INonCollateralizedLoan {
         uint256 _lockUpPeriodInMonths,
         uint256 _transactionPercentage,
         address payable _tokenAddress,
-        address payable _nyxCarbonAddress
+        address payable _lender
     ) {
         initialLoanAmount = _initialLoanAmount * 1e18;
         apy = _apy * 1e18;
@@ -45,31 +45,30 @@ contract NonCollateralizedLoan is INonCollateralizedLoan {
         lockUpPeriodInMonths = _lockUpPeriodInMonths;
         transactionPercentage = _transactionPercentage;
         token = LSP7Mintable(_tokenAddress);
-        nyxCarbonAddress = _nyxCarbonAddress;
-        lender = payable(msg.sender);
+        owner = payable(msg.sender);
+        lender = _lender;
         loanState = LoanState.Created;
     }
 
     // PERMISSIONS MODIFIERS
     modifier onlyInState(LoanState expectedState) {
-        if (loanState != expectedState) {
+        if (loanState != expectedState)
             revert ActionNotAllowedInCurrentState(loanState, expectedState);
-        }
         _;
     }
 
     modifier onlyOwner() {
-        require(msg.sender == nyxCarbonAddress, "Not the owner");
+        if (msg.sender != owner) revert Unauthorized(msg.sender);
         _;
     }
 
     modifier onlyLender() {
-        require(msg.sender == lender, "Not the lender");
+        if (msg.sender != lender) revert Unauthorized(msg.sender);
         _;
     }
 
     modifier onlyBorrower() {
-        require(msg.sender == borrower, "Not the borrower");
+        if (msg.sender != borrower) revert Unauthorized(msg.sender);
         _;
     }
 
@@ -99,13 +98,18 @@ contract NonCollateralizedLoan is INonCollateralizedLoan {
         );
     }
 
+    function setBorrower(address _borrower) public onlyOwner {
+        borrower = payable(_borrower);
+    }
+
     function acceptLoan()
         public
         virtual
         override
+        onlyBorrower
         onlyInState(LoanState.Funded)
     {
-        borrower = payable(msg.sender);
+        // borrower = payable(msg.sender);
 
         token.transfer(address(this), borrower, initialLoanAmount, true, "0x");
 
@@ -127,19 +131,17 @@ contract NonCollateralizedLoan is INonCollateralizedLoan {
         );
     }
 
-    function setPaymentSchedule(uint256[] memory _paymentSchedule) public {
+    function setPaymentSchedule(
+        uint256[] memory _paymentSchedule
+    ) public onlyOwner {
         paymentSchedule = _paymentSchedule;
         paymentIndex = 0;
     }
 
     function calculateMonthlyPayment()
-        public
+        internal
         view
-        returns (
-            // internal
-            uint256 fee,
-            uint256 payment
-        )
+        returns (uint256 fee, uint256 payment)
     {
         uint256 intermediateValue = 1e18 + apy / 1e2;
         uint256 intermediatePower = intermediateValue;
@@ -161,7 +163,12 @@ contract NonCollateralizedLoan is INonCollateralizedLoan {
         );
     }
 
-    function makePayment() public payable onlyInState(LoanState.Taken) {
+    function makePayment()
+        public
+        payable
+        onlyBorrower
+        onlyInState(LoanState.Taken)
+    {
         if (paymentIndex >= amortizationPeriodInMonths || currentBalance <= 0) {
             revert ZeroBalanceOnLoan();
         }
@@ -171,7 +178,7 @@ contract NonCollateralizedLoan is INonCollateralizedLoan {
         }
 
         token.transfer(borrower, lender, netMonthlyPayment, true, "0x");
-        token.transfer(borrower, nyxCarbonAddress, transactionFee, true, "0x");
+        token.transfer(borrower, owner, transactionFee, true, "0x");
 
         currentBalance -= (netMonthlyPayment + transactionFee);
         paymentIndex += 1;

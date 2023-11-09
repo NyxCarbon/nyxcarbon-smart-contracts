@@ -22,3 +22,8 @@ error ActionNotAllowedInCurrentState(
     LoanState currentState,
     LoanState expectedState
 );
+
+/**
+ * @dev reverts when msg.sender is not authorized to perform action
+ */
+error Unauthorized(address caller);
