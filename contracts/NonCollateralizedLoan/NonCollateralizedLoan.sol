@@ -165,7 +165,8 @@ contract NonCollateralizedLoan is INonCollateralizedLoan {
 
     function makePayment()
         public
-        payable
+        virtual
+        override
         onlyBorrower
         onlyInState(LoanState.Taken)
     {
@@ -178,13 +179,51 @@ contract NonCollateralizedLoan is INonCollateralizedLoan {
         }
 
         token.transfer(borrower, lender, netMonthlyPayment, true, "0x");
+        emit PaymentMade(
+            msg.sender,
+            borrower,
+            lender,
+            netMonthlyPayment,
+            true,
+            "0x"
+        );
+
         token.transfer(borrower, owner, transactionFee, true, "0x");
+        emit PaymentMade(
+            msg.sender,
+            borrower,
+            owner,
+            transactionFee,
+            true,
+            "0x"
+        );
 
         currentBalance -= (netMonthlyPayment + transactionFee);
         paymentIndex += 1;
 
         if (paymentIndex >= amortizationPeriodInMonths || currentBalance <= 0) {
             loanState = LoanState.Repayed;
+            emit LoanRepayed();
         }
+    }
+
+    function liquidiateLoan()
+        public
+        virtual
+        override
+        onlyLender
+        onlyInState(LoanState.Funded)
+    {
+        token.transfer(address(this), lender, initialLoanAmount, true, "0x");
+        loanState = LoanState.Liquidated;
+        emit LoanLiquidated(
+            msg.sender,
+            lender,
+            address(this),
+            initialLoanAmount,
+            true,
+            "0x"
+        );
+        selfdestruct(lender);
     }
 }
