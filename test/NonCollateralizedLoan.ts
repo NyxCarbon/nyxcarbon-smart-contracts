@@ -24,14 +24,14 @@ describe("Loan contract", function () {
     const apy: bigint = BigInt(14);
     const amortizationPeriodInMonths: bigint = BigInt(36);
     const lockUpPeriodInMonths: bigint = BigInt(18);
-    const transactionPercentage: bigint = BigInt(8);
+    const transactionBPS: bigint = BigInt(80);
 
     const hardhatLoan = await Loan.deploy(
       initialLoanAmount,
       apy,
       amortizationPeriodInMonths,
       lockUpPeriodInMonths,
-      transactionPercentage,
+      transactionBPS,
       hardhatToken.target as string,
       addr1
     );
@@ -52,7 +52,7 @@ describe("Loan contract", function () {
     // Mint additional .5M tokens for addr1 for funding loan
     await hardhatToken.mint(addr1.address, BigInt(500000) * BigInt(1e18), true, "0x");
 
-    return { Loan, hardhatLoan, Token, hardhatToken, owner, addr1, addr2, initialLoanAmount, apy, lockUpPeriodInMonths, transactionPercentage };
+    return { Loan, hardhatLoan, Token, hardhatToken, owner, addr1, addr2, initialLoanAmount, apy, lockUpPeriodInMonths, transactionBPS };
   }
 
   describe("Deployment", function () {
@@ -126,13 +126,13 @@ describe("Loan contract", function () {
     });
 
     it("Should calculate balance (loan + interest)", async function () {
-      const { hardhatLoan, addr1, addr2, initialLoanAmount, apy, transactionPercentage } = await loadFixture(deployLoanFixture);
+      const { hardhatLoan, addr1, addr2, initialLoanAmount, apy, transactionBPS } = await loadFixture(deployLoanFixture);
       await hardhatLoan.connect(addr1).fundLoan();
       await hardhatLoan.setBorrower(addr2);
       await hardhatLoan.connect(addr2).acceptLoan();
       
       const offChainGrossMonthlyPayment = (Number(initialLoanAmount) * ((1 + ((Number(apy) / 100) / 1)) ** 3)) / 36;
-      const offChainTransactionFee = offChainGrossMonthlyPayment * (Number(transactionPercentage) / 1000);
+      const offChainTransactionFee = offChainGrossMonthlyPayment * (Number(transactionBPS) / 1000);
       const offChainNetMonthlyPayment = offChainGrossMonthlyPayment - offChainTransactionFee;
       
       expect(await hardhatLoan.currentBalance() / BigInt(1e18)).to.equal(BigInt(Math.round((offChainTransactionFee + offChainNetMonthlyPayment) * 36)));
@@ -206,7 +206,7 @@ describe("Loan contract", function () {
     });
 
     it("Should allow borrower to transfer tokens to the lender (i.e., make a payment)", async function () {
-      const { hardhatToken, hardhatLoan, owner, addr1, addr2, initialLoanAmount, apy, transactionPercentage } = await loadFixture(deployLoanFixture);
+      const { hardhatToken, hardhatLoan, owner, addr1, addr2, initialLoanAmount, apy, transactionBPS } = await loadFixture(deployLoanFixture);
       await hardhatLoan.connect(addr1).fundLoan();
       await hardhatLoan.setBorrower(addr2);
       await hardhatLoan.connect(addr2).acceptLoan();
@@ -218,11 +218,11 @@ describe("Loan contract", function () {
       
       // Offchain calculations
       const offChainGrossMonthlyPayment = (Number(initialLoanAmount) * ((1 + ((Number(apy) / 100) / 1)) ** 3)) / 36;
-      const offChainTransactionFee = offChainGrossMonthlyPayment * (Number(transactionPercentage) / 1000);
+      const offChainTransactionFee = offChainGrossMonthlyPayment * (Number(transactionBPS) / 10000);
       const offChainNetMonthlyPayment = offChainGrossMonthlyPayment - offChainTransactionFee;
 
       expect(await hardhatToken.balanceOf(owner) / BigInt(1e18)).to.equal(BigInt(Math.round(offChainTransactionFee) - 1));
-      expect(await hardhatToken.balanceOf(addr1) / BigInt(1e18)).to.equal(BigInt(Math.round(offChainNetMonthlyPayment) + 1));
+      expect(await hardhatToken.balanceOf(addr1) / BigInt(1e18)).to.equal(BigInt(Math.round(offChainNetMonthlyPayment)));
       expect(await hardhatLoan.currentBalance() / BigInt(1e18)).to.equal(BigInt(Math.round((offChainTransactionFee + offChainNetMonthlyPayment) * 35)))
       expect(await hardhatLoan.paymentIndex()).to.equal(1);
     });
@@ -253,7 +253,7 @@ describe("Loan contract", function () {
     });
 
     it("Should emit PaymentMade event", async function () {
-      const { hardhatLoan, owner, addr1, addr2, initialLoanAmount, apy, transactionPercentage } = await loadFixture(deployLoanFixture);
+      const { hardhatLoan, owner, addr1, addr2, initialLoanAmount, apy, transactionBPS } = await loadFixture(deployLoanFixture);
       await hardhatLoan.connect(addr1).fundLoan();
       await hardhatLoan.setBorrower(addr2);
       await hardhatLoan.connect(addr2).acceptLoan();
@@ -261,7 +261,7 @@ describe("Loan contract", function () {
       
       // Offchain calculations
       const offChainGrossMonthlyPayment = (Number(initialLoanAmount) * ((1 + ((Number(apy) / 100) / 1)) ** 3)) / 36;
-      const offChainTransactionFee = offChainGrossMonthlyPayment * (Number(transactionPercentage) / 1000);
+      const offChainTransactionFee = offChainGrossMonthlyPayment * (Number(transactionBPS) / 1000);
       const offChainNetMonthlyPayment = offChainGrossMonthlyPayment - offChainTransactionFee;
 
       expect(await hardhatLoan.connect(addr2).makePayment())

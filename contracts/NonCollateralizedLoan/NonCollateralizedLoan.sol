@@ -17,6 +17,7 @@ contract NonCollateralizedLoan is INonCollateralizedLoan {
     address payable public borrower;
 
     uint256 public initialLoanAmount;
+    uint256 public totalLoanValue;
     uint256 public currentBalance;
     uint256 public apy;
     uint256 public amortizationPeriodInMonths;
@@ -27,8 +28,6 @@ contract NonCollateralizedLoan is INonCollateralizedLoan {
 
     uint256[] public paymentSchedule;
     uint256 public paymentIndex;
-    uint256 public netMonthlyPayment;
-    uint256 public transactionFee;
 
     constructor(
         uint256 _initialLoanAmount,
@@ -87,6 +86,8 @@ contract NonCollateralizedLoan is INonCollateralizedLoan {
             true,
             "0x"
         );
+        totalLoanValue = calculateTotalLoanValue();
+        currentBalance = totalLoanValue;
         loanState = LoanState.Funded;
         emit LoanFunded(
             msg.sender,
@@ -110,15 +111,7 @@ contract NonCollateralizedLoan is INonCollateralizedLoan {
         onlyInState(LoanState.Funded)
     {
         token.transfer(address(this), borrower, initialLoanAmount, true, "0x");
-
-        // Calculate the transaction fee and net monthly payment
-        (transactionFee, netMonthlyPayment) = calculateMonthlyPayment();
-        currentBalance =
-            (transactionFee + netMonthlyPayment) *
-            amortizationPeriodInMonths;
-
         loanState = LoanState.Taken;
-
         emit LoanAccepted(
             msg.sender,
             address(this),
@@ -136,29 +129,23 @@ contract NonCollateralizedLoan is INonCollateralizedLoan {
         paymentIndex = 0;
     }
 
+    function calculateTotalLoanValue() internal view returns (uint256) {
+        uint256 intermediateValue = (((10000 + (apy / 1e16)) ** 3) / 10000);
+        return ((initialLoanAmount) * intermediateValue) / 1e8;
+    }
+
     function calculateMonthlyPayment()
         internal
         view
-        returns (uint256 fee, uint256 payment)
+        returns (uint256, uint256)
     {
-        uint256 intermediateValue = 1e18 + apy / 1e2;
-        uint256 intermediatePower = intermediateValue;
-        for (uint256 i = 1; i < 3; i++) {
-            intermediatePower = (intermediatePower * intermediateValue) / 1e18;
-        }
-        uint256 grossMonthlyPayment = (initialLoanAmount * intermediatePower) /
-            1e36 /
-            amortizationPeriodInMonths;
+        uint256 monthlyPayment = (currentBalance / 1e16) /
+            (amortizationPeriodInMonths - paymentIndex);
 
-        uint256 calculatedTransactionFee = (grossMonthlyPayment *
-            (transactionPercentage)) / 1e3;
-        uint256 calculatedNetMonthlyPayment = grossMonthlyPayment -
-            calculatedTransactionFee;
+        uint256 fee = (monthlyPayment * transactionPercentage) / 10000;
+        uint256 netMonthlyPayment = monthlyPayment - fee;
 
-        return (
-            calculatedTransactionFee * 1e18,
-            calculatedNetMonthlyPayment * 1e18
-        );
+        return (netMonthlyPayment * 1e16, fee * 1e16);
     }
 
     function makePayment()
@@ -175,6 +162,10 @@ contract NonCollateralizedLoan is INonCollateralizedLoan {
         if (block.timestamp <= paymentSchedule[paymentIndex]) {
             revert PaymentNotDue(paymentSchedule[paymentIndex]);
         }
+
+        uint256 netMonthlyPayment;
+        uint256 transactionFee;
+        (netMonthlyPayment, transactionFee) = calculateMonthlyPayment();
 
         token.transfer(borrower, lender, netMonthlyPayment, true, "0x");
         emit PaymentMade(
