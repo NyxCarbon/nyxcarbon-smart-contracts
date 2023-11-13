@@ -109,8 +109,6 @@ contract NonCollateralizedLoan is INonCollateralizedLoan {
         onlyBorrower
         onlyInState(LoanState.Funded)
     {
-        // borrower = payable(msg.sender);
-
         token.transfer(address(this), borrower, initialLoanAmount, true, "0x");
 
         // Calculate the transaction fee and net monthly payment
