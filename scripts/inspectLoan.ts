@@ -3,10 +3,10 @@ import * as dotenv from 'dotenv';
 const fs = require("fs");
 
 dotenv.config();
-const { UP_ADDR, PRIVATE_KEY, TOKEN_ADDR } = process.env;
+const { PRIVATE_KEY } = process.env;
 
 async function main() {
-    const abiPath = "/Users/kylerozanitis/code/nyxcarbon-smart-contracts/artifacts/contracts/NonCollateralizedLoan/NonCollateralizedLoan.sol/NonCollateralizedLoan.json";
+    const abiPath = "./artifacts/contracts/NonCollateralizedLoan/NonCollateralizedLoan.sol/NonCollateralizedLoan.json";
     const abi = JSON.parse(fs.readFileSync(abiPath).toString()).abi;
 
     const provider = new ethers.JsonRpcProvider(
