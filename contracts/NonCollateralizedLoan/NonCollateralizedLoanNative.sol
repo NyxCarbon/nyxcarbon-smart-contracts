@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.4;
 
-import {INonCollateralizedLoan} from "./INonCollateralizedLoan.sol";
+import {INonCollateralizedLoanNative} from "./INonCollateralizedLoanNative.sol";
 import {LSP7Mintable} from "@lukso/lsp-smart-contracts/contracts/LSP7DigitalAsset/presets/LSP7Mintable.sol";
 import {PaymentNotDue, ZeroBalanceOnLoan, ActionNotAllowedInCurrentState, Unauthorized} from "./NonCollateralizedLoanErrors.sol";
 import {LoanState} from "./LoanEnums.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-contract NonCollateralizedLoanNative is INonCollateralizedLoan {
+contract NonCollateralizedLoanNative is INonCollateralizedLoanNative {
     uint256 public balance;
 
     LoanState public loanState;
@@ -25,7 +25,7 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoan {
     uint256 public transactionBps;
 
     uint256[] public paymentSchedule;
-    uint256 public paymentIndex;
+    uint256 public paymentIndex = 0;
 
     constructor(
         uint256 _initialLoanAmount,
@@ -130,19 +130,23 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoan {
         paymentIndex = 0;
     }
 
+    function setPaymentIndex(uint256 _paymentIndex) public onlyOwner {
+        paymentIndex = _paymentIndex;
+    }
+
     function calculateTotalLoanValue() internal view returns (uint256) {
         uint256 intermediateValue = (((10000 + (apy / 1e16)) ** 3) / 10000);
         return ((initialLoanAmount) * intermediateValue) / 1e8;
     }
 
     function calculateMonthlyPayment() public view returns (uint256, uint256) {
-        uint256 monthlyPayment = (currentBalance / 1e16) /
+        uint256 monthlyPayment = (currentBalance) /
             (amortizationPeriodInMonths - paymentIndex);
 
         uint256 fee = (monthlyPayment * transactionBps) / 10000;
         uint256 netMonthlyPayment = monthlyPayment - fee;
 
-        return (netMonthlyPayment * 1e16, fee * 1e16);
+        return (netMonthlyPayment, fee);
     }
 
     function makePayment()
