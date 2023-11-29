@@ -22,7 +22,7 @@ contract NonCollateralizedLoan is INonCollateralizedLoan {
     uint256 public apy;
     uint256 public amortizationPeriodInMonths;
     uint256 public lockUpPeriodInMonths;
-    uint256 public transactionPercentage;
+    uint256 public transactionBps;
 
     address payable public tokenAddress;
 
@@ -34,7 +34,7 @@ contract NonCollateralizedLoan is INonCollateralizedLoan {
         uint256 _apy,
         uint256 _amortizationPeriodInMonths,
         uint256 _lockUpPeriodInMonths,
-        uint256 _transactionPercentage,
+        uint256 _transactionBps,
         address payable _tokenAddress,
         address payable _lender
     ) {
@@ -42,7 +42,7 @@ contract NonCollateralizedLoan is INonCollateralizedLoan {
         apy = _apy * 1e18;
         amortizationPeriodInMonths = _amortizationPeriodInMonths;
         lockUpPeriodInMonths = _lockUpPeriodInMonths;
-        transactionPercentage = _transactionPercentage;
+        transactionBps = _transactionBps;
         token = LSP7Mintable(_tokenAddress);
         owner = payable(msg.sender);
         lender = _lender;
@@ -79,6 +79,13 @@ contract NonCollateralizedLoan is INonCollateralizedLoan {
         onlyLender
         onlyInState(LoanState.Created)
     {
+        // Ensure that the sender has enough balance of the token
+        require(
+            token.balanceOf(msg.sender) >= initialLoanAmount,
+            "Insufficient balance"
+        );
+
+        // Perform the token transfer
         token.transfer(
             msg.sender,
             address(this),
@@ -86,8 +93,12 @@ contract NonCollateralizedLoan is INonCollateralizedLoan {
             true,
             "0x"
         );
+
+        // Calculate total loan value
         totalLoanValue = calculateTotalLoanValue();
         currentBalance = totalLoanValue;
+
+        // Update loan state and emit event
         loanState = LoanState.Funded;
         emit LoanFunded(
             msg.sender,
@@ -129,23 +140,23 @@ contract NonCollateralizedLoan is INonCollateralizedLoan {
         paymentIndex = 0;
     }
 
+    function setPaymentIndex(uint256 _paymentIndex) public onlyOwner {
+        paymentIndex = _paymentIndex;
+    }
+
     function calculateTotalLoanValue() internal view returns (uint256) {
         uint256 intermediateValue = (((10000 + (apy / 1e16)) ** 3) / 10000);
         return ((initialLoanAmount) * intermediateValue) / 1e8;
     }
 
-    function calculateMonthlyPayment()
-        internal
-        view
-        returns (uint256, uint256)
-    {
-        uint256 monthlyPayment = (currentBalance / 1e16) /
+    function calculateMonthlyPayment() public view returns (uint256, uint256) {
+        uint256 monthlyPayment = (currentBalance) /
             (amortizationPeriodInMonths - paymentIndex);
 
-        uint256 fee = (monthlyPayment * transactionPercentage) / 10000;
+        uint256 fee = (monthlyPayment * transactionBps) / 10000;
         uint256 netMonthlyPayment = monthlyPayment - fee;
 
-        return (netMonthlyPayment * 1e16, fee * 1e16);
+        return (netMonthlyPayment, fee);
     }
 
     function makePayment()
@@ -163,9 +174,15 @@ contract NonCollateralizedLoan is INonCollateralizedLoan {
             revert PaymentNotDue(paymentSchedule[paymentIndex]);
         }
 
-        uint256 netMonthlyPayment;
-        uint256 transactionFee;
-        (netMonthlyPayment, transactionFee) = calculateMonthlyPayment();
+        (
+            uint256 netMonthlyPayment,
+            uint256 transactionFee
+        ) = calculateMonthlyPayment();
+
+        require(
+            token.balanceOf(msg.sender) >= netMonthlyPayment + transactionFee,
+            "Insufficient balance"
+        );
 
         token.transfer(borrower, lender, netMonthlyPayment, true, "0x");
         emit PaymentMade(

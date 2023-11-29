@@ -5,10 +5,6 @@ import {
   loadFixture,
 } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { generateEpochTimestamps } from "./utils";
-import * as dotenv from 'dotenv';
-
-dotenv.config();
-const { UP_ADDR } = process.env;
 
 describe("Loan contract", function () {
   async function deployLoanFixture() {
