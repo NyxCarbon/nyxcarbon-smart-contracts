@@ -84,7 +84,7 @@ describe("Loan contract", function () {
   
     it("Should prevent users who are not the owner from setting borrower", async function () {
       const { hardhatLoan, addr2 } = await loadFixture(deployLoanFixture);
-      await expect(hardhatLoan.connect(addr2).setBorrower(addr2)).revertedWithCustomError(hardhatLoan, 'Unauthorized').withArgs(addr2.address);
+      await expect(hardhatLoan.connect(addr2).setBorrower(addr2)).to.be.revertedWith('Ownable: caller is not the owner');
     });
   });
 
@@ -190,7 +190,7 @@ describe("Loan contract", function () {
       await hardhatLoan.connect(addr1).fundLoan();
       await hardhatLoan.setBorrower(addr2);
       await hardhatLoan.connect(addr2).acceptLoan();
-      await expect(hardhatLoan.connect(addr1).setPaymentSchedule(generateEpochTimestamps())).to.be.revertedWithCustomError(hardhatLoan, 'Unauthorized').withArgs(addr1.address);
+      await expect(hardhatLoan.connect(addr1).setPaymentSchedule(generateEpochTimestamps())).to.be.revertedWith('Ownable: caller is not the owner');
     });
   });
 
@@ -202,9 +202,9 @@ describe("Loan contract", function () {
       expect(await hardhatLoan.paymentIndex()).to.equal(12);
     });
     
-    it("Should prevent any user besides the owner to set payment schedule", async function () {
+    it("Should prevent any user besides the owner to set payment index", async function () {
       const { hardhatLoan, addr1 } = await loadFixture(deployLoanFixture);
-      await expect(hardhatLoan.connect(addr1).setPaymentIndex(12)).to.be.revertedWithCustomError(hardhatLoan, 'Unauthorized').withArgs(addr1.address);
+      await expect(hardhatLoan.connect(addr1).setPaymentIndex(12)).to.be.revertedWith('Ownable: caller is not the owner');
     });
   });
 

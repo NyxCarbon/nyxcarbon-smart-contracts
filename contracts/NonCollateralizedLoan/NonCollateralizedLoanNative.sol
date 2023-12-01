@@ -6,13 +6,13 @@ import {LSP7Mintable} from "@lukso/lsp-smart-contracts/contracts/LSP7DigitalAsse
 import {PaymentNotDue, ZeroBalanceOnLoan, ActionNotAllowedInCurrentState, Unauthorized} from "./NonCollateralizedLoanErrors.sol";
 import {LoanState} from "./LoanEnums.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract NonCollateralizedLoanNative is INonCollateralizedLoanNative {
+contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
     uint256 public balance;
 
     LoanState public loanState;
 
-    address payable public owner;
     address payable public lender;
     address payable public borrower;
 
@@ -40,7 +40,6 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative {
         amortizationPeriodInMonths = _amortizationPeriodInMonths;
         lockUpPeriodInMonths = _lockUpPeriodInMonths;
         transactionBps = _transactionBps;
-        owner = payable(msg.sender);
         lender = _lender;
         loanState = LoanState.Created;
     }
@@ -49,11 +48,6 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative {
     modifier onlyInState(LoanState expectedState) {
         if (loanState != expectedState)
             revert ActionNotAllowedInCurrentState(loanState, expectedState);
-        _;
-    }
-
-    modifier onlyOwner() {
-        if (msg.sender != owner) revert Unauthorized(msg.sender);
         _;
     }
 
@@ -188,11 +182,11 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative {
         );
 
         // Transfer transactionFee to the owner
-        payable(owner).transfer(transactionFee);
+        payable(owner()).transfer(transactionFee);
         emit PaymentMade(
             msg.sender,
             borrower,
-            owner,
+            owner(),
             transactionFee,
             true,
             "0x"
