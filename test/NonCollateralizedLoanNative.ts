@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import {
   time,
   loadFixture,
@@ -10,22 +10,23 @@ describe("Loan contract", function () {
   async function deployLoanFixture() {
     const [owner, addr1, addr2] = await ethers.getSigners();
 
-    // Deploy loan contract
-    const Loan = await ethers.getContractFactory("NonCollateralizedLoanNative");
+    // Loan Parameters
     const initialLoanAmount: bigint = BigInt(1000);
     const apy: bigint = BigInt(14);
     const amortizationPeriodInMonths: bigint = BigInt(36);
     const lockUpPeriodInMonths: bigint = BigInt(18);
     const transactionBPS: bigint = BigInt(80);
 
-    const hardhatLoan = await Loan.deploy(
+    // Deploy loan contract
+    const Loan = await ethers.getContractFactory("NonCollateralizedLoanNative");
+    const hardhatLoan = await upgrades.deployProxy(Loan, [
       initialLoanAmount,
       apy,
       amortizationPeriodInMonths,
       lockUpPeriodInMonths,
       transactionBPS,
-      addr1
-    );
+      addr1.address
+    ], { initializer: 'initialize' });
     await hardhatLoan.waitForDeployment();
     return { Loan, hardhatLoan, owner, addr1, addr2, initialLoanAmount, apy, lockUpPeriodInMonths, transactionBPS };
   }
