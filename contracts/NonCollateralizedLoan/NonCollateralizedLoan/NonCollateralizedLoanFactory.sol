@@ -2,13 +2,18 @@
 pragma solidity ^0.8.4;
 
 import {NonCollateralizedLoan} from "./NonCollateralizedLoan.sol";
-// import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
+import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract NonCollateralizedLoanFactory is Ownable {
+    address tokenImplementation;
     address[] public deployedLoans;
 
     event ContractCreated(address indexed createdContract);
+
+    constructor() {
+        tokenImplementation = address(new NonCollateralizedLoan());
+    }
 
     function createLoan(
         uint256 _initialLoanAmount,
@@ -19,16 +24,15 @@ contract NonCollateralizedLoanFactory is Ownable {
         address payable _tokenAddress,
         address payable _lender
     ) public onlyOwner {
-        address newLoan = address(
-            new NonCollateralizedLoan(
-                _initialLoanAmount,
-                _apy,
-                _amortizationPeriodInMonths,
-                _lockUpPeriodInMonths,
-                _transactionBps,
-                _tokenAddress,
-                _lender
-            )
+        address newLoan = Clones.clone(tokenImplementation);
+        NonCollateralizedLoan(newLoan).initialize(
+            _initialLoanAmount,
+            _apy,
+            _amortizationPeriodInMonths,
+            _lockUpPeriodInMonths,
+            _transactionBps,
+            _tokenAddress,
+            _lender
         );
         emit ContractCreated(address(newLoan));
         deployedLoans.push(newLoan);

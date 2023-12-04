@@ -3,11 +3,11 @@ pragma solidity ^0.8.4;
 
 import {INonCollateralizedLoan} from "./INonCollateralizedLoan.sol";
 import {LSP7Mintable} from "@lukso/lsp-smart-contracts/contracts/LSP7DigitalAsset/presets/LSP7Mintable.sol";
-import {PaymentNotDue, ZeroBalanceOnLoan, ActionNotAllowedInCurrentState, Unauthorized} from "./NonCollateralizedLoanErrors.sol";
-import {LoanState} from "./LoanEnums.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import {PaymentNotDue, ZeroBalanceOnLoan, ActionNotAllowedInCurrentState, Unauthorized} from "../NonCollateralizedLoanErrors.sol";
+import {LoanState} from "../LoanEnums.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract NonCollateralizedLoan is INonCollateralizedLoan, Ownable {
+contract NonCollateralizedLoan is INonCollateralizedLoan, OwnableUpgradeable {
     LSP7Mintable public token;
 
     LoanState public loanState;
@@ -28,7 +28,7 @@ contract NonCollateralizedLoan is INonCollateralizedLoan, Ownable {
     uint256[] public paymentSchedule;
     uint256 public paymentIndex;
 
-    constructor(
+    function initialize(
         uint256 _initialLoanAmount,
         uint256 _apy,
         uint256 _amortizationPeriodInMonths,
@@ -36,7 +36,7 @@ contract NonCollateralizedLoan is INonCollateralizedLoan, Ownable {
         uint256 _transactionBps,
         address payable _tokenAddress,
         address payable _lender
-    ) {
+    ) public initializer {
         initialLoanAmount = _initialLoanAmount * 1e18;
         apy = _apy * 1e18;
         amortizationPeriodInMonths = _amortizationPeriodInMonths;
@@ -45,7 +45,12 @@ contract NonCollateralizedLoan is INonCollateralizedLoan, Ownable {
         token = LSP7Mintable(_tokenAddress);
         lender = _lender;
         loanState = LoanState.Created;
+        paymentIndex = 0;
+        __Ownable_init();
     }
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
 
     // PERMISSIONS MODIFIERS
     modifier onlyInState(LoanState expectedState) {
@@ -130,7 +135,6 @@ contract NonCollateralizedLoan is INonCollateralizedLoan, Ownable {
         uint256[] memory _paymentSchedule
     ) public onlyOwner {
         paymentSchedule = _paymentSchedule;
-        paymentIndex = 0;
     }
 
     function setPaymentIndex(uint256 _paymentIndex) public onlyOwner {
@@ -223,6 +227,5 @@ contract NonCollateralizedLoan is INonCollateralizedLoan, Ownable {
             true,
             "0x"
         );
-        selfdestruct(lender);
     }
 }
