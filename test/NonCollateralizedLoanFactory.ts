@@ -1,4 +1,4 @@
-const { expect } = require("chai");
+import { expect } from "chai";
 import { AddressLike, ContractTransactionResponse, ContractRunner, Signer, Typed } from "ethers";
 import { ethers } from "hardhat";
 import { NonCollateralizedLoanFactory, NyxToken } from "../typechain-types";
