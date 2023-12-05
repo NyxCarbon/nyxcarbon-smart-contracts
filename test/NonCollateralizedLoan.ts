@@ -6,7 +6,7 @@ import {
 } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { generateEpochTimestamps } from "./utils";
 
-describe("Loan contract", function () {
+describe("Non-Collateralized Loan Contract -- LSP7/ECR20 Token", function () {
   async function deployLoanFixture() {
     // Deploy token to use in loan contract
     const Token = await ethers.getContractFactory("NyxToken");

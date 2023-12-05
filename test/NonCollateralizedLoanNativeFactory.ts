@@ -3,7 +3,7 @@ import { AddressLike, ContractTransactionResponse, ContractRunner, Signer, Typed
 import { ethers } from "hardhat";
 import { NonCollateralizedLoanNativeFactory } from "../typechain-types";
 
-describe("NonCollateralizedLoanFactory contract", function () {
+describe("Non-Collateralized Loan Factory Contract -- Native Token", function () {
   let owner: ContractRunner | null | undefined;
   let addr1: AddressLike | Typed;
   let addr2: AddressLike | Typed;
