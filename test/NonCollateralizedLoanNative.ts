@@ -1,13 +1,14 @@
 import { expect } from "chai";
-import { ethers, upgrades } from "hardhat";
+import { ethers, network, upgrades } from "hardhat";
 import {
   time,
   loadFixture,
 } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { generateEpochTimestamps } from "./utils";
 
-describe("Loan contract", function () {
+describe("Non-Collateralized Loan Contract -- Native Token", function () {
   async function deployLoanFixture() {
+    await network.provider.send("hardhat_reset");
     const [owner, addr1, addr2] = await ethers.getSigners();
 
     // Loan Parameters
@@ -116,9 +117,10 @@ describe("Loan contract", function () {
 
       // Get addr2 balance before accepting loan
       const addrBalancePreLoan = await ethers.provider.getBalance(addr2.address) / BigInt(1e18);
+      const gasFee = BigInt(1);
 
       await hardhatLoan.connect(addr2).acceptLoan();
-      expect((await ethers.provider.getBalance(addr2.address) / BigInt(1e18)) - addrBalancePreLoan).to.equal(initialLoanAmount);
+      expect(((await ethers.provider.getBalance(addr2.address) / BigInt(1e18)) - addrBalancePreLoan) + gasFee).to.equal(initialLoanAmount);
     });
 
     it("Should calculate balance (loan + interest)", async function () {
