@@ -11,23 +11,23 @@ contract NonCollateralizedLoanNative is
     INonCollateralizedLoanNative,
     OwnableUpgradeable
 {
-    uint256 public balance;
+    uint256 public balance; // the amount of the native protocol coin locked in the smart contract during funding
 
-    LoanState public loanState;
+    LoanState public loanState; // state of the loan
 
-    address payable public lender;
-    address payable public borrower;
+    address payable public lender; // address who lent the amount
+    address payable public borrower; // address who borrowed the amount
 
-    uint256 public initialLoanAmount;
-    uint256 public totalLoanValue;
-    uint256 public currentBalance;
-    uint256 public apy;
-    uint256 public amortizationPeriodInMonths;
-    uint256 public lockUpPeriodInMonths;
-    uint256 public transactionBps;
+    uint256 public initialLoanAmount; // amount lent to the borrower
+    uint256 public totalLoanValue; // amount lent to the borrower + interest
+    uint256 public currentBalance; // current amount left to be paid of the totalLoanValue
+    uint256 public apy; // interest rate
+    uint256 public amortizationPeriodInMonths; // number of payment periods in months
+    uint256 public lockUpPeriodInMonths; // number of months until the first payment is due
+    uint256 public transactionBps; // transaction fee measured in basis points paid to the owner for origination
 
-    uint256[] public paymentSchedule;
-    uint256 public paymentIndex;
+    uint256[] public paymentSchedule; // array of uints representing the dates when payments are due in Unix epoch time
+    uint256 public paymentIndex; // keeps track of how many payments have been made
 
     function initialize(
         uint256 _initialLoanAmount,
