@@ -6,7 +6,7 @@ import {
 } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { generateEpochTimestamps } from "./utils";
 
-describe("Non-Collateralized Loan Contract -- Native Token", function () {
+describe("Non-Collateralized Loan Contract -- Native Token V2", function () {
   async function deployLoanFixture() {
     await network.provider.send("hardhat_reset");
     const [owner, addr1, addr2] = await ethers.getSigners();
@@ -376,6 +376,36 @@ describe("Non-Collateralized Loan Contract -- Native Token", function () {
       await hardhatLoan.setBorrower(addr2);
       await hardhatLoan.connect(addr2).acceptLoan();
       await expect(hardhatLoan.connect(addr1).liquidiateLoan()).to.be.revertedWithCustomError(hardhatLoan, "ActionNotAllowedInCurrentState");
+    });
+  });
+
+  // SET LENDER tests
+  describe("Set Lender", function () {
+    it("Should allow the owner to set the lender", async function () {
+      const { hardhatLoan, addr2 } = await loadFixture(deployLoanFixture);
+
+      // Upgrade to V2 to include setLender() function
+      const LoanV2 = await ethers.getContractFactory('NonCollateralizedLoanNativeV2');
+      const loanAddress = await hardhatLoan.getAddress();
+      await upgrades.upgradeProxy(loanAddress, LoanV2);
+      const upgradedLoan = LoanV2.attach(loanAddress);
+
+      // Update lender using new function
+      await upgradedLoan.setLender(addr2);
+      expect(await upgradedLoan.lender()).to.equal(addr2.address);
+    });
+  
+    it("Should prevent users who are not the owner from setting lender", async function () {
+      const { hardhatLoan, addr2 } = await loadFixture(deployLoanFixture);
+
+      // Upgrade to V2 to include setLender() function
+      const LoanV2 = await ethers.getContractFactory('NonCollateralizedLoanNativeV2');
+      const loanAddress = await hardhatLoan.getAddress();
+      await upgrades.upgradeProxy(loanAddress, LoanV2);
+      const upgradedLoan = LoanV2.attach(loanAddress);
+
+      // Try updating lender using new function with addr2 to trigger failure
+      await expect(upgradedLoan.connect(addr2).setLender(addr2)).to.be.revertedWith('Ownable: caller is not the owner');
     });
   });
 });

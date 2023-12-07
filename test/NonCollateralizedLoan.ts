@@ -1,12 +1,12 @@
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import {
   time,
   loadFixture,
 } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { generateEpochTimestamps } from "./utils";
 
-describe("Loan contract", function () {
+describe("Non-Collateralized Loan Contract -- LSP7/ECR20 Token", function () {
   async function deployLoanFixture() {
     // Deploy token to use in loan contract
     const Token = await ethers.getContractFactory("NyxToken");
@@ -14,23 +14,24 @@ describe("Loan contract", function () {
     const hardhatToken = await Token.deploy();
     await hardhatToken.waitForDeployment();
 
-    // Deploy loan with address of newly minted token
-    const Loan = await ethers.getContractFactory("NonCollateralizedLoan");
+    // Loan Parameters
     const initialLoanAmount: bigint = BigInt(500000);
     const apy: bigint = BigInt(14);
     const amortizationPeriodInMonths: bigint = BigInt(36);
     const lockUpPeriodInMonths: bigint = BigInt(18);
     const transactionBPS: bigint = BigInt(80);
-
-    const hardhatLoan = await Loan.deploy(
-      initialLoanAmount,
-      apy,
-      amortizationPeriodInMonths,
-      lockUpPeriodInMonths,
-      transactionBPS,
-      hardhatToken.target as string,
-      addr1
-    );
+    
+    // Deploy loan contract with address of newly minted token
+    const Loan = await ethers.getContractFactory("NonCollateralizedLoan");
+    const hardhatLoan = await upgrades.deployProxy(Loan, [
+        initialLoanAmount,
+        apy,
+        amortizationPeriodInMonths,
+        lockUpPeriodInMonths,
+        transactionBPS,
+        hardhatToken.target as string,
+        addr1.address
+    ]);
     await hardhatLoan.waitForDeployment();
 
     // Authorize operator to transfer 1M tokens for owner

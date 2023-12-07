@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.4;
 
-import {INonCollateralizedLoan} from "./INonCollateralizedLoan.sol";
+import {INonCollateralizedLoanNative} from "./INonCollateralizedLoanNative.sol";
 import {LSP7Mintable} from "@lukso/lsp-smart-contracts/contracts/LSP7DigitalAsset/presets/LSP7Mintable.sol";
-import {PaymentNotDue, ZeroBalanceOnLoan, ActionNotAllowedInCurrentState, Unauthorized} from "./NonCollateralizedLoanErrors.sol";
-import {LoanState} from "./LoanEnums.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import {PaymentNotDue, ZeroBalanceOnLoan, ActionNotAllowedInCurrentState, Unauthorized} from "../NonCollateralizedLoanErrors.sol";
+import {LoanState} from "../LoanEnums.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract NonCollateralizedLoan is INonCollateralizedLoan, Ownable {
-    LSP7Mintable public token;
+contract NonCollateralizedLoanNative is
+    INonCollateralizedLoanNative,
+    OwnableUpgradeable
+{
+    uint256 public balance;
 
     LoanState public loanState;
 
@@ -23,29 +26,30 @@ contract NonCollateralizedLoan is INonCollateralizedLoan, Ownable {
     uint256 public lockUpPeriodInMonths;
     uint256 public transactionBps;
 
-    address payable public tokenAddress;
-
     uint256[] public paymentSchedule;
     uint256 public paymentIndex;
 
-    constructor(
+    function initialize(
         uint256 _initialLoanAmount,
         uint256 _apy,
         uint256 _amortizationPeriodInMonths,
         uint256 _lockUpPeriodInMonths,
         uint256 _transactionBps,
-        address payable _tokenAddress,
         address payable _lender
-    ) {
+    ) public initializer {
         initialLoanAmount = _initialLoanAmount * 1e18;
         apy = _apy * 1e18;
         amortizationPeriodInMonths = _amortizationPeriodInMonths;
         lockUpPeriodInMonths = _lockUpPeriodInMonths;
         transactionBps = _transactionBps;
-        token = LSP7Mintable(_tokenAddress);
         lender = _lender;
         loanState = LoanState.Created;
+        paymentIndex = 0;
+        __Ownable_init();
     }
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
 
     // PERMISSIONS MODIFIERS
     modifier onlyInState(LoanState expectedState) {
@@ -67,31 +71,19 @@ contract NonCollateralizedLoan is INonCollateralizedLoan, Ownable {
     // LOAN FUNCTIONS
     function fundLoan()
         public
+        payable
         virtual
         override
         onlyLender
         onlyInState(LoanState.Created)
     {
-        // Ensure that the sender has enough balance of the token
         require(
-            token.balanceOf(msg.sender) >= initialLoanAmount,
-            "Insufficient balance"
+            msg.value == initialLoanAmount,
+            "Amount in msg does not equal loan value"
         );
-
-        // Perform the token transfer
-        token.transfer(
-            msg.sender,
-            address(this),
-            initialLoanAmount,
-            true,
-            "0x"
-        );
-
-        // Calculate total loan value
+        balance += msg.value;
         totalLoanValue = calculateTotalLoanValue();
         currentBalance = totalLoanValue;
-
-        // Update loan state and emit event
         loanState = LoanState.Funded;
         emit LoanFunded(
             msg.sender,
@@ -114,13 +106,19 @@ contract NonCollateralizedLoan is INonCollateralizedLoan, Ownable {
         onlyBorrower
         onlyInState(LoanState.Funded)
     {
-        token.transfer(address(this), borrower, initialLoanAmount, true, "0x");
+        uint256 amountToTransfer = balance;
+        balance = 0; // Set the balance to zero before the transfer to prevent reentrancy
+
+        (bool success, ) = payable(borrower).call{value: amountToTransfer}("");
+        require(success, "Transfer failed");
+
         loanState = LoanState.Taken;
+
         emit LoanAccepted(
             msg.sender,
             address(this),
             borrower,
-            initialLoanAmount,
+            amountToTransfer,
             true,
             "0x"
         );
@@ -154,6 +152,7 @@ contract NonCollateralizedLoan is INonCollateralizedLoan, Ownable {
 
     function makePayment()
         public
+        payable
         virtual
         override
         onlyBorrower
@@ -172,12 +171,14 @@ contract NonCollateralizedLoan is INonCollateralizedLoan, Ownable {
             uint256 transactionFee
         ) = calculateMonthlyPayment();
 
+        // Ensure the borrower has sent sufficient funds
         require(
-            token.balanceOf(msg.sender) >= netMonthlyPayment + transactionFee,
-            "Insufficient balance"
+            msg.value >= netMonthlyPayment + transactionFee,
+            "Insufficient funds sent"
         );
 
-        token.transfer(borrower, lender, netMonthlyPayment, true, "0x");
+        // Transfer netMonthlyPayment to the lender
+        payable(lender).transfer(netMonthlyPayment);
         emit PaymentMade(
             msg.sender,
             borrower,
@@ -187,7 +188,8 @@ contract NonCollateralizedLoan is INonCollateralizedLoan, Ownable {
             "0x"
         );
 
-        token.transfer(borrower, owner(), transactionFee, true, "0x");
+        // Transfer transactionFee to the owner
+        payable(owner()).transfer(transactionFee);
         emit PaymentMade(
             msg.sender,
             borrower,
@@ -213,7 +215,12 @@ contract NonCollateralizedLoan is INonCollateralizedLoan, Ownable {
         onlyLender
         onlyInState(LoanState.Funded)
     {
-        token.transfer(address(this), lender, initialLoanAmount, true, "0x");
+        uint256 amount = balance;
+        balance = 0; // Set balance to 0 before the external call
+
+        (bool success, ) = msg.sender.call{value: amount}("");
+        require(success, "Failed to liquidate loan");
+
         loanState = LoanState.Liquidated;
         emit LoanLiquidated(
             msg.sender,
@@ -223,6 +230,5 @@ contract NonCollateralizedLoan is INonCollateralizedLoan, Ownable {
             true,
             "0x"
         );
-        selfdestruct(lender);
     }
 }

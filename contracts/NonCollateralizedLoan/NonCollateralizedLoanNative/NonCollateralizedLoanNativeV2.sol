@@ -3,12 +3,14 @@ pragma solidity ^0.8.4;
 
 import {INonCollateralizedLoanNative} from "./INonCollateralizedLoanNative.sol";
 import {LSP7Mintable} from "@lukso/lsp-smart-contracts/contracts/LSP7DigitalAsset/presets/LSP7Mintable.sol";
-import {PaymentNotDue, ZeroBalanceOnLoan, ActionNotAllowedInCurrentState, Unauthorized} from "./NonCollateralizedLoanErrors.sol";
-import {LoanState} from "./LoanEnums.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import {PaymentNotDue, ZeroBalanceOnLoan, ActionNotAllowedInCurrentState, Unauthorized} from "../NonCollateralizedLoanErrors.sol";
+import {LoanState} from "../LoanEnums.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
+contract NonCollateralizedLoanNativeV2 is
+    INonCollateralizedLoanNative,
+    OwnableUpgradeable
+{
     uint256 public balance;
 
     LoanState public loanState;
@@ -25,16 +27,16 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
     uint256 public transactionBps;
 
     uint256[] public paymentSchedule;
-    uint256 public paymentIndex = 0;
+    uint256 public paymentIndex;
 
-    constructor(
+    function initialize(
         uint256 _initialLoanAmount,
         uint256 _apy,
         uint256 _amortizationPeriodInMonths,
         uint256 _lockUpPeriodInMonths,
         uint256 _transactionBps,
         address payable _lender
-    ) {
+    ) public initializer {
         initialLoanAmount = _initialLoanAmount * 1e18;
         apy = _apy * 1e18;
         amortizationPeriodInMonths = _amortizationPeriodInMonths;
@@ -42,7 +44,12 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
         transactionBps = _transactionBps;
         lender = _lender;
         loanState = LoanState.Created;
+        paymentIndex = 0;
+        __Ownable_init();
     }
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() initializer {}
 
     // PERMISSIONS MODIFIERS
     modifier onlyInState(LoanState expectedState) {
@@ -90,6 +97,10 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
 
     function setBorrower(address _borrower) public onlyOwner {
         borrower = payable(_borrower);
+    }
+
+    function setLender(address _lender) public onlyOwner {
+        lender = payable(_lender);
     }
 
     function acceptLoan()

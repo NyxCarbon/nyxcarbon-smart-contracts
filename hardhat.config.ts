@@ -1,6 +1,7 @@
 import { HardhatUserConfig } from 'hardhat/config';
 import { config as LoadEnv } from 'dotenv';
 import '@nomicfoundation/hardhat-toolbox';
+import "@openzeppelin/hardhat-upgrades";
 
 LoadEnv();
 
