@@ -1,27 +1,20 @@
 import { expect } from "chai";
 import { AddressLike, ContractTransactionResponse, ContractRunner, Signer, Typed } from "ethers";
 import { ethers } from "hardhat";
-import { NonCollateralizedLoanFactory, NyxToken } from "../typechain-types";
+import { NonCollateralizedLoanNativeFactory } from "../../../typechain-types";
 
-describe("Non-Collateralized Loan Factory Contract -- LSP7/ERC20 Token", function () {
+describe("Non-Collateralized Loan Factory Contract -- Native Token", function () {
   let owner: ContractRunner | null | undefined;
   let addr1: AddressLike | Typed;
   let addr2: AddressLike | Typed;
   let LoanFactory;
-  let Token;
-  let loanFactory: NonCollateralizedLoanFactory & { deploymentTransaction(): ContractTransactionResponse; };
-  let hardhatToken: NyxToken & { deploymentTransaction(): ContractTransactionResponse; };
+  let loanFactory: NonCollateralizedLoanNativeFactory & { deploymentTransaction(): ContractTransactionResponse; };
 
   beforeEach(async function () {
     [owner, addr1, addr2] = await ethers.getSigners();
 
-    // Deploy NyxToken
-    Token = await ethers.getContractFactory("NyxToken");
-    hardhatToken = await Token.deploy();
-    await hardhatToken.waitForDeployment();
-
-    // Deploy NonCollateralizedLoanFactory
-    LoanFactory = await ethers.getContractFactory("NonCollateralizedLoanFactory");
+    // Deploy NonCollateralizedLoanNativeFactory
+    LoanFactory = await ethers.getContractFactory("NonCollateralizedLoanNativeFactory");
     loanFactory = await LoanFactory.deploy();
     await loanFactory.waitForDeployment();
   });
@@ -32,6 +25,7 @@ describe("Non-Collateralized Loan Factory Contract -- LSP7/ERC20 Token", functio
     const amortizationPeriodInMonths = BigInt(36);
     const lockUpPeriodInMonths = BigInt(18);
     const transactionBPS = BigInt(80);
+    const carbonCreditsGenerated = BigInt(12500);
 
     await loanFactory.connect(owner).createLoan(
       initialLoanAmount,
@@ -39,8 +33,8 @@ describe("Non-Collateralized Loan Factory Contract -- LSP7/ERC20 Token", functio
       amortizationPeriodInMonths,
       lockUpPeriodInMonths,
       transactionBPS,
-      hardhatToken,
-      addr1
+      addr1,
+      carbonCreditsGenerated
     );
 
     const deployedLoans = await loanFactory.getDeployedLoans();
@@ -63,6 +57,7 @@ describe("Non-Collateralized Loan Factory Contract -- LSP7/ERC20 Token", functio
     const amortizationPeriodInMonths = BigInt(36);
     const lockUpPeriodInMonths = BigInt(18);
     const transactionBPS = BigInt(80);
+    const carbonCreditsGenerated = BigInt(12500);
 
     await expect(
       loanFactory.connect(owner).createLoan(
@@ -71,8 +66,8 @@ describe("Non-Collateralized Loan Factory Contract -- LSP7/ERC20 Token", functio
         amortizationPeriodInMonths,
         lockUpPeriodInMonths,
         transactionBPS,
-        hardhatToken,
-        addr1
+        addr1,
+        carbonCreditsGenerated
       )
     )
       .to.emit(loanFactory, "ContractCreated");
@@ -84,6 +79,7 @@ describe("Non-Collateralized Loan Factory Contract -- LSP7/ERC20 Token", functio
     const amortizationPeriodInMonths = BigInt(36);
     const lockUpPeriodInMonths = BigInt(18);
     const transactionBPS = BigInt(80);
+    const carbonCreditsGenerated = BigInt(12500);
 
     await loanFactory.connect(owner).createLoan(
       initialLoanAmount,
@@ -91,8 +87,8 @@ describe("Non-Collateralized Loan Factory Contract -- LSP7/ERC20 Token", functio
       amortizationPeriodInMonths,
       lockUpPeriodInMonths,
       transactionBPS,
-      hardhatToken,
-      addr1
+      addr1,
+      carbonCreditsGenerated
     );
 
     await loanFactory.connect(owner).createLoan(
@@ -101,8 +97,8 @@ describe("Non-Collateralized Loan Factory Contract -- LSP7/ERC20 Token", functio
       amortizationPeriodInMonths,
       lockUpPeriodInMonths,
       transactionBPS,
-      hardhatToken,
-      addr2
+      addr2,
+      carbonCreditsGenerated
     );
 
     const deployedLoans = await loanFactory.getDeployedLoans();
