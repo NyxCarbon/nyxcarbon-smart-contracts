@@ -21,7 +21,8 @@ contract NonCollateralizedLoanNativeFactory is Ownable {
         uint256 _amortizationPeriodInMonths,
         uint256 _lockUpPeriodInMonths,
         uint256 _transactionBps,
-        address payable _lender
+        address payable _lender,
+        int256 _carbonCreditsGenerated
     ) public onlyOwner {
         address newLoan = Clones.clone(tokenImplementation);
         NonCollateralizedLoanNative(newLoan).initialize(
@@ -30,7 +31,8 @@ contract NonCollateralizedLoanNativeFactory is Ownable {
             _amortizationPeriodInMonths,
             _lockUpPeriodInMonths,
             _transactionBps,
-            _lender
+            _lender,
+            _carbonCreditsGenerated
         );
         emit ContractCreated(address(newLoan));
         deployedLoans.push(newLoan);

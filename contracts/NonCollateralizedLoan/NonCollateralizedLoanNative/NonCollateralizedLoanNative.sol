@@ -3,9 +3,12 @@ pragma solidity ^0.8.4;
 
 import {INonCollateralizedLoanNative} from "./INonCollateralizedLoanNative.sol";
 import {LSP7Mintable} from "@lukso/lsp-smart-contracts/contracts/LSP7DigitalAsset/presets/LSP7Mintable.sol";
-import {PaymentNotDue, ZeroBalanceOnLoan, ActionNotAllowedInCurrentState, Unauthorized} from "../NonCollateralizedLoanErrors.sol";
+import {PaymentNotDue, ZeroBalanceOnLoan, ActionNotAllowedInCurrentState, ActionNotAllowedInCurrentStates, Unauthorized} from "../NonCollateralizedLoanErrors.sol";
 import {LoanState} from "../LoanEnums.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
+// Dev imports
+import "hardhat/console.sol";
 
 contract NonCollateralizedLoanNative is
     INonCollateralizedLoanNative,
@@ -20,7 +23,7 @@ contract NonCollateralizedLoanNative is
 
     uint256 public initialLoanAmount; // amount lent to the borrower
     uint256 public totalLoanValue; // amount lent to the borrower + interest
-    uint256 public currentBalance; // current amount left to be paid of the totalLoanValue
+    uint256 public currentBalance; // remaining amount left to be paid of the totalLoanValue
     uint256 public apy; // interest rate
     uint256 public amortizationPeriodInMonths; // number of payment periods in months
     uint256 public lockUpPeriodInMonths; // number of months until the first payment is due
@@ -29,32 +32,58 @@ contract NonCollateralizedLoanNative is
     uint256[] public paymentSchedule; // array of uints representing the dates when payments are due in Unix epoch time
     uint256 public paymentIndex; // keeps track of how many payments have been made
 
+    int256 public carbonCreditsGenerated; // total number of carbon credits generated from the project
+    int256 public carbonCreditBalance; // remaining number of carbon credits that can be swapped
+    int256 public carbonCreditPrice; // price of carbon credits; updated weekly until the loan state is set to Repayed or Swapped
+
     function initialize(
         uint256 _initialLoanAmount,
         uint256 _apy,
         uint256 _amortizationPeriodInMonths,
         uint256 _lockUpPeriodInMonths,
         uint256 _transactionBps,
-        address payable _lender
+        address payable _lender,
+        int256 _carbonCreditsGenerated
     ) public initializer {
+        // Loan Data
         initialLoanAmount = _initialLoanAmount * 1e18;
         apy = _apy * 1e18;
         amortizationPeriodInMonths = _amortizationPeriodInMonths;
         lockUpPeriodInMonths = _lockUpPeriodInMonths;
         transactionBps = _transactionBps;
         lender = _lender;
+
+        // Project Data
+        carbonCreditsGenerated = _carbonCreditsGenerated;
+        carbonCreditBalance = _carbonCreditsGenerated;
+
+        // Initializing State
         loanState = LoanState.Created;
         paymentIndex = 0;
+
+        // Initialize Parent Contracts
         __Ownable_init();
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() initializer {}
+    constructor() {
+        _disableInitializers();
+    }
 
     // PERMISSIONS MODIFIERS
     modifier onlyInState(LoanState expectedState) {
         if (loanState != expectedState)
             revert ActionNotAllowedInCurrentState(loanState, expectedState);
+        _;
+    }
+
+    modifier onlyInStates(LoanState expectedState1, LoanState expectedState2) {
+        if (loanState != expectedState1 && loanState != expectedState2)
+            revert ActionNotAllowedInCurrentStates(
+                loanState,
+                expectedState1,
+                expectedState2
+            );
         _;
     }
 
@@ -135,6 +164,10 @@ contract NonCollateralizedLoanNative is
         paymentIndex = _paymentIndex;
     }
 
+    function setCarbonCreditPrice(int256 _carbonCreditPrice) public onlyOwner {
+        carbonCreditPrice = _carbonCreditPrice;
+    }
+
     function calculateTotalLoanValue() internal view returns (uint256) {
         uint256 intermediateValue = (((10000 + (apy / 1e16)) ** 3) / 10000);
         return ((initialLoanAmount) * intermediateValue) / 1e8;
@@ -148,6 +181,53 @@ contract NonCollateralizedLoanNative is
         uint256 netMonthlyPayment = monthlyPayment - fee;
 
         return (netMonthlyPayment, fee);
+    }
+
+    function calculateProfit() internal view returns (int256) {
+        // calculate profit as remaining carbon credit balance * current price of carbon credits
+        // divided by the initial loan amount
+        return
+            (carbonCreditBalance * carbonCreditPrice) - int(initialLoanAmount);
+    }
+
+    function evaluateSwapState()
+        public
+        onlyOwner
+        onlyInStates(LoanState.Taken, LoanState.Swappable)
+    {
+        int256 profit = calculateProfit();
+        int256 profitPercentage = (profit * 10000) / int(initialLoanAmount);
+
+        // execute swap if profit percentage is greater than 53%
+        // else place loan in swappable state
+        if (profitPercentage > 5300) {
+            loanState = LoanState.Swappable;
+            executeSwap();
+        } else if (profitPercentage > 3200) {
+            loanState = LoanState.Swappable;
+            emit LoanSwappable(carbonCreditBalance, profit, profitPercentage);
+        } else {
+            emit LoanNotSwappable(
+                carbonCreditBalance,
+                profit,
+                profitPercentage
+            );
+        }
+    }
+
+    function executeSwap() public onlyOwner onlyInState(LoanState.Swappable) {
+        int256 profit = calculateProfit();
+        int256 profitPercentage = (profit * 10000) / int(initialLoanAmount);
+
+        // Ensure the profit is still greater than 32% at time of execution
+        if (profitPercentage <= 3200) {
+            loanState = LoanState.Taken;
+            emit LoanNoLongerSwappable(profitPercentage);
+        } else {
+            currentBalance = 0;
+            loanState = LoanState.Swapped;
+            emit LoanSwapped(carbonCreditBalance, profit, profitPercentage);
+        }
     }
 
     function makePayment()

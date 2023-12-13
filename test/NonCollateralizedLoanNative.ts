@@ -17,6 +17,7 @@ describe("Non-Collateralized Loan Contract -- Native Token", function () {
     const amortizationPeriodInMonths: bigint = BigInt(36);
     const lockUpPeriodInMonths: bigint = BigInt(18);
     const transactionBPS: bigint = BigInt(80);
+    const carbonCreditsGenerated: bigint = BigInt(25);
 
     // Deploy loan contract
     const Loan = await ethers.getContractFactory("NonCollateralizedLoanNative");
@@ -26,7 +27,8 @@ describe("Non-Collateralized Loan Contract -- Native Token", function () {
       amortizationPeriodInMonths,
       lockUpPeriodInMonths,
       transactionBPS,
-      addr1.address
+      addr1.address,
+      carbonCreditsGenerated
     ], { initializer: 'initialize' });
     await hardhatLoan.waitForDeployment();
     return { Loan, hardhatLoan, owner, addr1, addr2, initialLoanAmount, apy, lockUpPeriodInMonths, transactionBPS };
@@ -197,6 +199,164 @@ describe("Non-Collateralized Loan Contract -- Native Token", function () {
     });
   });
 
+  // SET CARBON CREDIT PRICE tests
+  describe("Set Carbon Credit Price", function () {
+    it("Should set the carbon credit price", async function () {
+      const { hardhatLoan } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.setCarbonCreditPrice(ethers.parseEther('52.86'));
+      expect(ethers.formatEther(await hardhatLoan.carbonCreditPrice())).to.equal('52.86');
+    });
+    
+    it("Should only allow the owner to modify the carbon credit price", async function () {
+      const { hardhatLoan, addr1 } = await loadFixture(deployLoanFixture);
+      await expect(hardhatLoan.connect(addr1).setCarbonCreditPrice(ethers.parseEther('52.86'))).to.be.revertedWith('Ownable: caller is not the owner');
+    });
+  });
+
+  // EVALUATE SWAP STATE tests
+  describe("Evalulate Swap State", function () {
+    it("Should set the loan state to swappable when profit is greater than 32%", async function () {
+      const { hardhatLoan, addr1, addr2, initialLoanAmount } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.connect(addr1).fundLoan({ value: ethers.parseEther(initialLoanAmount.toString()) });
+      await hardhatLoan.setBorrower(addr2);
+      await hardhatLoan.connect(addr2).acceptLoan();
+      await hardhatLoan.setCarbonCreditPrice(ethers.parseEther('52.86'));
+      await hardhatLoan.evaluateSwapState();
+
+      expect(await hardhatLoan.loanState()).to.equal(5);
+    });
+
+    it("Should emit LoanSwappable event", async function () {
+      const { hardhatLoan, owner, addr1, addr2, initialLoanAmount, apy, transactionBPS } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.connect(addr1).fundLoan({ value: ethers.parseEther(initialLoanAmount.toString()) });
+      await hardhatLoan.setBorrower(addr2);
+      await hardhatLoan.connect(addr2).acceptLoan();
+      await hardhatLoan.setCarbonCreditPrice(ethers.parseEther('52.86'));
+
+      await expect(hardhatLoan.evaluateSwapState())
+        .to.emit(hardhatLoan, "LoanSwappable")
+        .withArgs(25, BigInt(3215) * BigInt(1e17), 3215)
+    });
+
+
+    it("Should set the loan state to swapped when profit is greater than 53%", async function () {
+      const { hardhatLoan, addr1, addr2, initialLoanAmount } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.connect(addr1).fundLoan({ value: ethers.parseEther(initialLoanAmount.toString()) });
+      await hardhatLoan.setBorrower(addr2);
+      await hardhatLoan.connect(addr2).acceptLoan();
+      await hardhatLoan.setCarbonCreditPrice(ethers.parseEther('62.00'));
+      await hardhatLoan.evaluateSwapState();
+
+      expect(await hardhatLoan.loanState()).to.equal(6);
+    });
+    
+    it("Should emit LoanSwapped event", async function () {
+      const { hardhatLoan, owner, addr1, addr2, initialLoanAmount, apy, transactionBPS } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.connect(addr1).fundLoan({ value: ethers.parseEther(initialLoanAmount.toString()) });
+      await hardhatLoan.setBorrower(addr2);
+      await hardhatLoan.connect(addr2).acceptLoan();
+      await hardhatLoan.setCarbonCreditPrice(ethers.parseEther('62.00'));
+
+      await expect(hardhatLoan.evaluateSwapState())
+        .to.emit(hardhatLoan, "LoanSwapped")
+        .withArgs(25, BigInt(5500) * BigInt(1e17), 5500)
+    });
+
+    it("Should leave the loan state as Taken when profit is less than 32%", async function () {
+      const { hardhatLoan, addr1, addr2, initialLoanAmount } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.connect(addr1).fundLoan({ value: ethers.parseEther(initialLoanAmount.toString()) });
+      await hardhatLoan.setBorrower(addr2);
+      await hardhatLoan.connect(addr2).acceptLoan();
+      await hardhatLoan.setCarbonCreditPrice(ethers.parseEther('50.00'));
+      await hardhatLoan.evaluateSwapState();
+
+      expect(await hardhatLoan.loanState()).to.equal(2);
+    });
+
+    it("Should emit LoanNotSwappable event", async function () {
+      const { hardhatLoan, owner, addr1, addr2, initialLoanAmount, apy, transactionBPS } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.connect(addr1).fundLoan({ value: ethers.parseEther(initialLoanAmount.toString()) });
+      await hardhatLoan.setBorrower(addr2);
+      await hardhatLoan.connect(addr2).acceptLoan();
+      await hardhatLoan.setCarbonCreditPrice(ethers.parseEther('50.00'));
+
+      await expect(hardhatLoan.evaluateSwapState())
+        .to.emit(hardhatLoan, "LoanNotSwappable")
+        .withArgs(25, BigInt(2500) * BigInt(1e17), 2500);
+    });
+    
+    it("Should only allow the owner to evaluate loan swap state", async function () {
+      const { hardhatLoan, addr1, addr2, initialLoanAmount} = await loadFixture(deployLoanFixture);
+      await hardhatLoan.connect(addr1).fundLoan({ value: ethers.parseEther(initialLoanAmount.toString()) });
+      await hardhatLoan.setBorrower(addr2);
+      await hardhatLoan.connect(addr2).acceptLoan();
+      await hardhatLoan.setCarbonCreditPrice(ethers.parseEther('52.86'));      
+
+      await expect(hardhatLoan.connect(addr1).evaluateSwapState()).to.be.revertedWith('Ownable: caller is not the owner');
+    });
+  });
+
+  // EXECUTE SWAP tests
+  describe("Execute Swap", function () {
+    it("Should execute the swap when the profit is greater than 32%", async function () {
+      const { hardhatLoan, addr1, addr2, initialLoanAmount } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.connect(addr1).fundLoan({ value: ethers.parseEther(initialLoanAmount.toString()) });
+      await hardhatLoan.setBorrower(addr2);
+      await hardhatLoan.connect(addr2).acceptLoan();
+      await hardhatLoan.setCarbonCreditPrice(ethers.parseEther('52.86'));
+      await hardhatLoan.evaluateSwapState();
+      await hardhatLoan.executeSwap();
+      
+      expect(await hardhatLoan.currentBalance()).to.equal(0);
+      expect(await hardhatLoan.loanState()).to.equal(6);
+    });
+    
+    it("Should emit LoanSwapped event", async function () {
+      const { hardhatLoan, owner, addr1, addr2, initialLoanAmount, apy, transactionBPS } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.connect(addr1).fundLoan({ value: ethers.parseEther(initialLoanAmount.toString()) });
+      await hardhatLoan.setBorrower(addr2);
+      await hardhatLoan.connect(addr2).acceptLoan();
+      await hardhatLoan.setCarbonCreditPrice(ethers.parseEther('52.86'));
+      await hardhatLoan.evaluateSwapState();
+
+      await expect(hardhatLoan.executeSwap())
+        .to.emit(hardhatLoan, "LoanSwapped")
+        .withArgs(25, BigInt(3215) * BigInt(1e17), 3215)
+    });
+
+    it("Should only allow the owner to evaluate loan swap", async function () {
+      const { hardhatLoan, addr1, addr2, initialLoanAmount} = await loadFixture(deployLoanFixture);
+      await hardhatLoan.connect(addr1).fundLoan({ value: ethers.parseEther(initialLoanAmount.toString()) });
+      await hardhatLoan.setBorrower(addr2);
+      await hardhatLoan.connect(addr2).acceptLoan();
+      await hardhatLoan.setCarbonCreditPrice(ethers.parseEther('52.86'));
+      await hardhatLoan.evaluateSwapState();    
+
+      await expect(hardhatLoan.connect(addr1).executeSwap()).to.be.revertedWith('Ownable: caller is not the owner');
+    });
+
+    it("Should throw LoanNotSwappable and set loanState back to Taken when carbon credit price changes since evaluation", async function () {
+      const { hardhatLoan, addr1, addr2, initialLoanAmount} = await loadFixture(deployLoanFixture);
+      await hardhatLoan.connect(addr1).fundLoan({ value: ethers.parseEther(initialLoanAmount.toString()) });
+      await hardhatLoan.setBorrower(addr2);
+      await hardhatLoan.connect(addr2).acceptLoan();
+      await hardhatLoan.setCarbonCreditPrice(ethers.parseEther('52.86'));
+      await hardhatLoan.evaluateSwapState();
+
+      // Set the carbon credit price to simulate price decrease in between when the loan state was set to swappable and when borrower tried to execute swap
+      await hardhatLoan.setCarbonCreditPrice(ethers.parseEther('50.00'));
+
+      // Loan is no longer swappable due to profit percentage now only 25%
+      await expect(hardhatLoan.executeSwap()).to.emit(hardhatLoan, "LoanNoLongerSwappable").withArgs(2500);
+      
+      // Loan state is set back to Taken
+      expect(await hardhatLoan.loanState()).to.equal(2);
+      
+      // Function executeSwap() can not longer be called
+      await expect(hardhatLoan.executeSwap()).to.be.revertedWithCustomError(hardhatLoan, "ActionNotAllowedInCurrentState");
+    });
+  });
+
   // CALCULATE MONTHLY PAYMENT tests
   describe("Calculate Monthly Payment", function () {
     it("Should properly calculate monthly payment and transaction fee", async function () {
@@ -249,7 +409,7 @@ describe("Non-Collateralized Loan Contract -- Native Token", function () {
       await hardhatLoan.connect(addr1).fundLoan({ value: ethers.parseEther(initialLoanAmount.toString()) });
       await hardhatLoan.setBorrower(addr2);
       await hardhatLoan.connect(addr2).acceptLoan();
-      await hardhatLoan.setPaymentSchedule(generateEpochTimestamps(new Date('2022-05-08')));
+      await hardhatLoan.setPaymentSchedule(generateEpochTimestamps(new Date('2022-06-08')));
       
       // Offchain calculations
       const offChainGrossMonthlyPayment = (Number(initialLoanAmount) * ((1 + ((Number(apy) / 100) / 1)) ** 3)) / 36;
@@ -278,7 +438,7 @@ describe("Non-Collateralized Loan Contract -- Native Token", function () {
       await hardhatLoan.connect(addr1).fundLoan({ value: ethers.parseEther(initialLoanAmount.toString()) });
       await hardhatLoan.setBorrower(addr2);
       await hardhatLoan.connect(addr2).acceptLoan();
-      const paymentSchedule = generateEpochTimestamps(new Date('2022-05-08'));
+      const paymentSchedule = generateEpochTimestamps(new Date('2022-06-08'));
       await hardhatLoan.setPaymentSchedule(paymentSchedule);
 
       // Move time forward and pay off loan
@@ -301,7 +461,7 @@ describe("Non-Collateralized Loan Contract -- Native Token", function () {
       await hardhatLoan.connect(addr1).fundLoan({ value: ethers.parseEther(initialLoanAmount.toString()) });
       await hardhatLoan.setBorrower(addr2);
       await hardhatLoan.connect(addr2).acceptLoan();
-      await hardhatLoan.setPaymentSchedule(generateEpochTimestamps(new Date('2022-05-08')));
+      await hardhatLoan.setPaymentSchedule(generateEpochTimestamps(new Date('2022-06-08')));
       
       const [netMonthlyPayment, transactionFee] = await hardhatLoan.connect(addr2).calculateMonthlyPayment();
       expect(await hardhatLoan.connect(addr2).makePayment({ value: netMonthlyPayment + transactionFee }))
@@ -316,7 +476,7 @@ describe("Non-Collateralized Loan Contract -- Native Token", function () {
       await hardhatLoan.connect(addr1).fundLoan({ value: ethers.parseEther(initialLoanAmount.toString()) });
       await hardhatLoan.setBorrower(addr2);
       await hardhatLoan.connect(addr2).acceptLoan();
-      const paymentSchedule = generateEpochTimestamps(new Date('2022-05-08'));
+      const paymentSchedule = generateEpochTimestamps(new Date('2022-06-08'));
       await hardhatLoan.setPaymentSchedule(paymentSchedule);
 
       // Move time forward and pay off loan
