@@ -4,7 +4,7 @@ import {
   time,
   loadFixture,
 } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import { generateEpochTimestamps } from "./utils";
+import { generateEpochTimestamps } from "../test/utils";
 
 describe("Non-Collateralized Loan Contract -- Native Token V2", function () {
   async function deployLoanFixture() {
