@@ -81,6 +81,48 @@ interface INonCollateralizedLoan {
         bytes data
     );
 
+    /**
+     * @dev Emitted when the carbon credits can be swapped to clear the remaining balance of the loan.
+     * @param carbonCreditBalance The number of carbon credits that would be transferred to the lender if the loan swap is executed.
+     * @param expectedProfit The profit that would be realized if the loan swap is executed.
+     * @param expectedProfitPercentage The profit percentage that would be realized if the loan swap is executed.
+     */
+    event LoanSwappable(
+        int256 carbonCreditBalance,
+        int256 expectedProfit,
+        int256 expectedProfitPercentage
+    );
+
+    /**
+     * @dev Emitted when the carbon credits have been swapped.
+     * @param transferredCarbonCredits The number of carbon credits transferred to the lender.
+     * @param realizedProfit The lender realized profit.
+     * @param realizedProfitPercentage The lender realized profit percentage.
+     */
+    event LoanSwapped(
+        int256 transferredCarbonCredits,
+        int256 realizedProfit,
+        int256 realizedProfitPercentage
+    );
+
+    /**
+     * @dev Emitted when the carbon credits cannot be swapped.
+     * @param carbonCreditBalance The number of carbon credits that would be transferred to the lender if the loan swap were executable.
+     * @param expectedProfit The profit that would be realized if the loan swap were executable.
+     * @param expectedProfitPercentage The profit percentage that would be realized if the loan swap were executable.
+     */
+    event LoanNotSwappable(
+        int256 carbonCreditBalance,
+        int256 expectedProfit,
+        int256 expectedProfitPercentage
+    );
+
+    /**
+     * @dev Emitted when the profit is no longer greater than 32%.
+     * @param expectedProfitPercentage The profit percentage that would be realized if the loan swap were executable.
+     */
+    event LoanNoLongerSwappable(int256 expectedProfitPercentage);
+
     // --- Loan Functionality
     function fundLoan() external;
 
