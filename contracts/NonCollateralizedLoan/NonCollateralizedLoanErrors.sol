@@ -24,6 +24,15 @@ error ActionNotAllowedInCurrentState(
 );
 
 /**
+ * @dev reverts when loan is not in either of two correct states
+ */
+error ActionNotAllowedInCurrentStates(
+    LoanState currentState,
+    LoanState expectedState1,
+    LoanState expectedState2
+);
+
+/**
  * @dev reverts when msg.sender is not authorized to perform action
  */
 error Unauthorized(address caller);
