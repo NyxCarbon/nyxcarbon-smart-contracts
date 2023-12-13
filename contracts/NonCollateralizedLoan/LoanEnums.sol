@@ -11,5 +11,7 @@ enum LoanState {
     Funded,
     Taken,
     Repayed,
-    Liquidated
+    Liquidated,
+    Swappable,
+    Swapped
 }
