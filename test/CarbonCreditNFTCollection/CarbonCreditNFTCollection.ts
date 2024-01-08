@@ -7,7 +7,7 @@ import {
 
 
 describe("Carbon Credit NFT contract", function () {
-  async function deployTokenFixture() {
+  async function deployNFTCollectionFixture() {
     // Get the ContractFactory and Signers here.
     const NFTCollection = await ethers.getContractFactory("CarbonCreditNFTCollection");
     const [owner, addr1, addr2] = await ethers.getSigners();
@@ -20,14 +20,14 @@ describe("Carbon Credit NFT contract", function () {
 
   describe("Deployment", function () {
     it("Should set the right owner", async function () {
-      const { hardhatNFTCollection, owner } = await loadFixture(deployTokenFixture);
+      const { hardhatNFTCollection, owner } = await loadFixture(deployNFTCollectionFixture);
       expect(await hardhatNFTCollection.owner()).to.equal(owner.address);
     });
   });
 
   describe("Carbon Credit NFT minting", function () {
   it("Should mint a new carbon credit NFT", async function () {
-    const { hardhatNFTCollection, owner } = await loadFixture(deployTokenFixture);
+    const { hardhatNFTCollection, owner } = await loadFixture(deployNFTCollectionFixture);
 
     const projectName = "Project Green";
     const registryLink = "http://registry.example.com";
@@ -37,16 +37,20 @@ describe("Carbon Credit NFT contract", function () {
     expect(await hardhatNFTCollection.tokenOwnerOf('0x0000000000000000000000000000000000000000000000000000000000000001')).to.equal(owner.address);
   });
 
-  // it("Should emit an event on minting", async function () {
-  //   const { hardhatNFTCollection, addr1 } = await loadFixture(deployTokenFixture);
+  it("Should emit an event on minting", async function () {
+    const { hardhatNFTCollection, addr1 } = await loadFixture(deployNFTCollectionFixture);
 
-  //   await expect(hardhatNFTCollection.mintCarbonCreditNFT(addr1.address, "Project Green", "http://registry.example.com", 1000))
-  //     .to.emit(hardhatNFTCollection, "Minted")
-  //     .withArgs(/* expected args */);
-  // });
+    const projectName = "Project Green";
+    const registryLink = "http://registry.example.com";
+    const units = 1000;
+
+    await expect(hardhatNFTCollection.mintCarbonCreditNFT(addr1.address, projectName, registryLink, units))
+      .to.emit(hardhatNFTCollection, "Minted")
+      .withArgs(addr1.address, '0x0000000000000000000000000000000000000000000000000000000000000001', projectName, registryLink, units);
+  });
 
   it("Should allow minting to different addresses", async function () {
-    const { hardhatNFTCollection, addr1, addr2 } = await loadFixture(deployTokenFixture);
+    const { hardhatNFTCollection, addr1, addr2 } = await loadFixture(deployNFTCollectionFixture);
 
     await hardhatNFTCollection.mintCarbonCreditNFT(addr1.address, "Project Green", "http://registry.example.com", 1000);
     await hardhatNFTCollection.mintCarbonCreditNFT(addr2.address, "Project Blue", "http://registry.example.org", 500);
@@ -58,7 +62,7 @@ describe("Carbon Credit NFT contract", function () {
 
 describe("Retrieving Carbon Credit NFT Details", function () {
   it("Should allow owner to access carbon credit NFT metadata", async function () {
-    const { hardhatNFTCollection, addr1 } = await loadFixture(deployTokenFixture);
+    const { hardhatNFTCollection, addr1 } = await loadFixture(deployNFTCollectionFixture);
 
     const projectName = "Project Green";
     const registryLink = "http://registry.example.com";
@@ -73,7 +77,7 @@ describe("Retrieving Carbon Credit NFT Details", function () {
   });
 
   it("Should handle non-existent NFTs correctly", async function () {
-    const { hardhatNFTCollection } = await loadFixture(deployTokenFixture);
+    const { hardhatNFTCollection } = await loadFixture(deployNFTCollectionFixture);
     
     // Should revert with LSP8NonExistentTokenId since no NFTs have been minted yet
     await expect(hardhatNFTCollection.tokenOwnerOf('0x0000000000000000000000000000000000000000000000000000000000000001')).to.be.revertedWithCustomError(hardhatNFTCollection, 'LSP8NonExistentTokenId').withArgs("0x0000000000000000000000000000000000000000000000000000000000000001");

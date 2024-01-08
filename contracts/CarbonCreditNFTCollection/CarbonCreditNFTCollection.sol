@@ -13,6 +13,14 @@ contract CarbonCreditNFTCollection is LSP8Mintable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
 
+    event Minted(
+        address to,
+        uint256 id,
+        string projectName,
+        string registryLink,
+        uint256 units
+    );
+
     struct CarbonCredit {
         uint256 id;
         string projectName;
@@ -54,6 +62,7 @@ contract CarbonCreditNFTCollection is LSP8Mintable {
         _carbonCredits[newTokenId] = newCarbonCredit;
 
         mint(to, bytes32(newTokenId), true, "0x");
+        emit Minted(to, newTokenId, projectName, registryLink, units);
         return newTokenId;
     }
 
