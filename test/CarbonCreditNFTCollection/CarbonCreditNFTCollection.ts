@@ -8,7 +8,6 @@ import {
 
 describe("Carbon Credit NFT contract", function () {
   async function deployNFTCollectionFixture() {
-    // Get the ContractFactory and Signers here.
     const NFTCollection = await ethers.getContractFactory("CarbonCreditNFTCollection");
     const [owner, addr1, addr2] = await ethers.getSigners();
     
@@ -58,30 +57,38 @@ describe("Carbon Credit NFT contract", function () {
     expect(await hardhatNFTCollection.tokenOwnerOf('0x0000000000000000000000000000000000000000000000000000000000000001')).to.equal(addr1.address);
     expect(await hardhatNFTCollection.tokenOwnerOf('0x0000000000000000000000000000000000000000000000000000000000000002')).to.equal(addr2.address);
   });
-});
 
-describe("Retrieving Carbon Credit NFT Details", function () {
-  it("Should allow owner to access carbon credit NFT metadata", async function () {
+  it("Should only allow owner to mint NFTs", async function () {
     const { hardhatNFTCollection, addr1 } = await loadFixture(deployNFTCollectionFixture);
 
-    const projectName = "Project Green";
-    const registryLink = "http://registry.example.com";
-    const units = 1000;
-
-    const tokenId = await hardhatNFTCollection.mintCarbonCreditNFT(addr1.address, projectName, registryLink, units);
-    const nftMetadata = await hardhatNFTCollection.getCarbonCreditNFT('0x0000000000000000000000000000000000000000000000000000000000000001');
-    
-    expect(nftMetadata[1]).to.equal(projectName);
-    expect(nftMetadata[2]).to.equal(registryLink);
-    expect(nftMetadata[3]).to.equal(units);
-  });
-
-  it("Should handle non-existent NFTs correctly", async function () {
-    const { hardhatNFTCollection } = await loadFixture(deployNFTCollectionFixture);
-    
-    // Should revert with LSP8NonExistentTokenId since no NFTs have been minted yet
-    await expect(hardhatNFTCollection.tokenOwnerOf('0x0000000000000000000000000000000000000000000000000000000000000001')).to.be.revertedWithCustomError(hardhatNFTCollection, 'LSP8NonExistentTokenId').withArgs("0x0000000000000000000000000000000000000000000000000000000000000001");
+    // Should revert with OwnableCallerNotTheOwner since only the owner should be able to mint new NFTs
+    await expect(hardhatNFTCollection.connect(addr1).mintCarbonCreditNFT(addr1.address, "Project Green", "http://registry.example.com", 1000))
+      .to.be.revertedWithCustomError(hardhatNFTCollection, 'OwnableCallerNotTheOwner').withArgs(addr1.address);
   });
 });
 
+  describe("Retrieving Carbon Credit NFT Details", function () {
+    it("Should allow owner to access carbon credit NFT metadata", async function () {
+      const { hardhatNFTCollection, addr1 } = await loadFixture(deployNFTCollectionFixture);
+
+      const projectName = "Project Green";
+      const registryLink = "http://registry.example.com";
+      const units = 1000;
+
+      const tokenId = await hardhatNFTCollection.mintCarbonCreditNFT(addr1.address, projectName, registryLink, units);
+      const nftMetadata = await hardhatNFTCollection.getCarbonCreditNFT('0x0000000000000000000000000000000000000000000000000000000000000001');
+      
+      expect(nftMetadata[1]).to.equal(projectName);
+      expect(nftMetadata[2]).to.equal(registryLink);
+      expect(nftMetadata[3]).to.equal(units);
+    });
+
+    it("Should handle non-existent NFTs correctly", async function () {
+      const { hardhatNFTCollection } = await loadFixture(deployNFTCollectionFixture);
+      
+      // Should revert with LSP8NonExistentTokenId since no NFTs have been minted yet
+      await expect(hardhatNFTCollection.tokenOwnerOf('0x0000000000000000000000000000000000000000000000000000000000000001'))
+        .to.be.revertedWithCustomError(hardhatNFTCollection, 'LSP8NonExistentTokenId').withArgs("0x0000000000000000000000000000000000000000000000000000000000000001");
+    });
+  });
 });
