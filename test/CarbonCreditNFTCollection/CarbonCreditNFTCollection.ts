@@ -83,6 +83,21 @@ describe("Carbon Credit NFT contract", function () {
       expect(nftMetadata[3]).to.equal(units);
     });
 
+    it("Should allow addr2 to access carbon credit NFT metadata for addr1's NFT", async function () {
+      const { hardhatNFTCollection, addr1, addr2 } = await loadFixture(deployNFTCollectionFixture);
+
+      const projectName = "Project Green";
+      const registryLink = "http://registry.example.com";
+      const units = 1000;
+
+      await hardhatNFTCollection.mintCarbonCreditNFT(addr1.address, projectName, registryLink, units);
+      const nftMetadata = await hardhatNFTCollection.connect(addr2).getCarbonCreditNFT('0x0000000000000000000000000000000000000000000000000000000000000001');
+      
+      expect(nftMetadata[1]).to.equal(projectName);
+      expect(nftMetadata[2]).to.equal(registryLink);
+      expect(nftMetadata[3]).to.equal(units);
+    });
+
     it("Should handle non-existent NFTs correctly", async function () {
       const { hardhatNFTCollection } = await loadFixture(deployNFTCollectionFixture);
       
