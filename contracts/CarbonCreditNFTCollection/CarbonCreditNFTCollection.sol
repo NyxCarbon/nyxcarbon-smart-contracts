@@ -6,8 +6,9 @@ import {LSP8Mintable} from "@lukso/lsp-smart-contracts/contracts/LSP8Identifiabl
 import "@openzeppelin/contracts/utils/Counters.sol";
 
 // constants
-import {_LSP8_TOKENID_TYPE_NUMBER} from "@lukso/lsp-smart-contracts/contracts/LSP8IdentifiableDigitalAsset/LSP8Constants.sol";
-import {_LSP4_TOKEN_TYPE_DATA_KEY, TokenType} from "./TokenTypes.sol";
+import {_LSP8_TOKENID_FORMAT_NUMBER} from "@lukso/lsp-smart-contracts/contracts/LSP8IdentifiableDigitalAsset/LSP8Constants.sol";
+import {_LSP4_TOKEN_TYPE_COLLECTION} from "@lukso/lsp-smart-contracts/contracts/LSP4DigitalAssetMetadata/LSP4Constants.sol";
+import {_NYXCC_PROJECT_NAME_DATA_KEY, _NYXCC_REGISTRY_LINK_DATA_KEY, _NYXCC_UNITS_DATA_KEY} from "./constants.sol";
 
 contract CarbonCreditNFTCollection is LSP8Mintable {
     using Counters for Counters.Counter;
@@ -18,16 +19,8 @@ contract CarbonCreditNFTCollection is LSP8Mintable {
         uint256 id,
         string projectName,
         string registryLink,
-        uint256 units
+        string units
     );
-
-    struct CarbonCredit {
-        uint256 id;
-        string projectName;
-        string registryLink;
-        uint256 units;
-    }
-    mapping(uint256 => CarbonCredit) private _carbonCredits;
 
     constructor(
         string memory carbonCreditNFTCollectionName,
@@ -38,38 +31,63 @@ contract CarbonCreditNFTCollection is LSP8Mintable {
             carbonCreditNFTCollectionName,
             carbonCreditNFTCollectionSymbol,
             contractOwner,
-            _LSP8_TOKENID_TYPE_NUMBER
+            _LSP4_TOKEN_TYPE_COLLECTION,
+            _LSP8_TOKENID_FORMAT_NUMBER
         )
-    {
-        _setData(_LSP4_TOKEN_TYPE_DATA_KEY, abi.encode(TokenType.COLLECTION));
-    }
+    {}
 
     function mintCarbonCreditNFT(
         address to,
         string memory projectName,
         string memory registryLink,
-        uint256 units
+        string memory units
     ) external returns (uint256) {
         _tokenIds.increment();
         uint256 newTokenId = _tokenIds.current();
 
-        CarbonCredit memory newCarbonCredit = CarbonCredit({
-            id: newTokenId,
-            projectName: projectName,
-            registryLink: registryLink,
-            units: units
-        });
-        _carbonCredits[newTokenId] = newCarbonCredit;
-
+        // Mint token
         mint(to, bytes32(newTokenId), true, "0x");
+
+        // Define arrays for storing data in ERC725Y contract
+        bytes32[] memory tokenIds = new bytes32[](3);
+        bytes32[] memory dataKeys = new bytes32[](3);
+        bytes[] memory dataValues = new bytes[](3);
+
+        // Assign values to the arrays
+        tokenIds[0] = bytes32(newTokenId);
+        tokenIds[1] = bytes32(newTokenId);
+        tokenIds[2] = bytes32(newTokenId);
+
+        dataKeys[0] = _NYXCC_PROJECT_NAME_DATA_KEY;
+        dataKeys[1] = _NYXCC_REGISTRY_LINK_DATA_KEY;
+        dataKeys[2] = _NYXCC_UNITS_DATA_KEY;
+
+        dataValues[0] = bytes(projectName);
+        dataValues[1] = bytes(registryLink);
+        dataValues[2] = bytes(units);
+
+        // Call function to set multiple key-value pairs
+        setDataBatchForTokenIds(tokenIds, dataKeys, dataValues);
+
         emit Minted(to, newTokenId, projectName, registryLink, units);
         return newTokenId;
     }
 
     function getCarbonCreditNFT(
         uint256 tokenId
-    ) external view returns (uint256, string memory, string memory, uint256) {
-        CarbonCredit memory cc = _carbonCredits[tokenId];
-        return (cc.id, cc.projectName, cc.registryLink, cc.units);
+    ) external view returns (bytes[] memory dataValues) {
+        bytes32[] memory tokenIds = new bytes32[](3);
+        bytes32[] memory dataKeys = new bytes32[](3);
+
+        tokenIds[0] = bytes32(tokenId);
+        tokenIds[1] = bytes32(tokenId);
+        tokenIds[2] = bytes32(tokenId);
+
+        dataKeys[0] = _NYXCC_PROJECT_NAME_DATA_KEY;
+        dataKeys[1] = _NYXCC_REGISTRY_LINK_DATA_KEY;
+        dataKeys[2] = _NYXCC_UNITS_DATA_KEY;
+
+        bytes[] memory data = getDataBatchForTokenIds(tokenIds, dataKeys);
+        return (data);
     }
 }

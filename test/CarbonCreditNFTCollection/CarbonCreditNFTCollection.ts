@@ -5,6 +5,8 @@ import {
   loadFixture,
 } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
+import { convertBytesToString } from "../utils";
+
 
 describe("Carbon Credit NFT contract", function () {
   async function deployNFTCollectionFixture() {
@@ -30,7 +32,7 @@ describe("Carbon Credit NFT contract", function () {
 
     const projectName = "Project Green";
     const registryLink = "http://registry.example.com";
-    const units = 1000;
+    const units = "1000";
 
     const tokenId = await hardhatNFTCollection.mintCarbonCreditNFT(owner.address, projectName, registryLink, units);
     expect(await hardhatNFTCollection.tokenOwnerOf('0x0000000000000000000000000000000000000000000000000000000000000001')).to.equal(owner.address);
@@ -41,7 +43,7 @@ describe("Carbon Credit NFT contract", function () {
 
     const projectName = "Project Green";
     const registryLink = "http://registry.example.com";
-    const units = 1000;
+    const units = "1000";
 
     await expect(hardhatNFTCollection.mintCarbonCreditNFT(addr1.address, projectName, registryLink, units))
       .to.emit(hardhatNFTCollection, "Minted")
@@ -51,8 +53,8 @@ describe("Carbon Credit NFT contract", function () {
   it("Should allow minting to different addresses", async function () {
     const { hardhatNFTCollection, addr1, addr2 } = await loadFixture(deployNFTCollectionFixture);
 
-    await hardhatNFTCollection.mintCarbonCreditNFT(addr1.address, "Project Green", "http://registry.example.com", 1000);
-    await hardhatNFTCollection.mintCarbonCreditNFT(addr2.address, "Project Blue", "http://registry.example.org", 500);
+    await hardhatNFTCollection.mintCarbonCreditNFT(addr1.address, "Project Green", "http://registry.example.com", "1000");
+    await hardhatNFTCollection.mintCarbonCreditNFT(addr2.address, "Project Blue", "http://registry.example.org", "500");
 
     expect(await hardhatNFTCollection.tokenOwnerOf('0x0000000000000000000000000000000000000000000000000000000000000001')).to.equal(addr1.address);
     expect(await hardhatNFTCollection.tokenOwnerOf('0x0000000000000000000000000000000000000000000000000000000000000002')).to.equal(addr2.address);
@@ -62,7 +64,7 @@ describe("Carbon Credit NFT contract", function () {
     const { hardhatNFTCollection, addr1 } = await loadFixture(deployNFTCollectionFixture);
 
     // Should revert with OwnableCallerNotTheOwner since only the owner should be able to mint new NFTs
-    await expect(hardhatNFTCollection.connect(addr1).mintCarbonCreditNFT(addr1.address, "Project Green", "http://registry.example.com", 1000))
+    await expect(hardhatNFTCollection.connect(addr1).mintCarbonCreditNFT(addr1.address, "Project Green", "http://registry.example.com", "1000"))
       .to.be.revertedWithCustomError(hardhatNFTCollection, 'OwnableCallerNotTheOwner').withArgs(addr1.address);
   });
 });
@@ -73,14 +75,14 @@ describe("Carbon Credit NFT contract", function () {
 
       const projectName = "Project Green";
       const registryLink = "http://registry.example.com";
-      const units = 1000;
+      const units = "1000";
 
       const tokenId = await hardhatNFTCollection.mintCarbonCreditNFT(addr1.address, projectName, registryLink, units);
       const nftMetadata = await hardhatNFTCollection.getCarbonCreditNFT('0x0000000000000000000000000000000000000000000000000000000000000001');
       
-      expect(nftMetadata[1]).to.equal(projectName);
-      expect(nftMetadata[2]).to.equal(registryLink);
-      expect(nftMetadata[3]).to.equal(units);
+      expect(convertBytesToString(nftMetadata[0])).to.equal(projectName);
+      expect(convertBytesToString(nftMetadata[1])).to.equal(registryLink);
+      expect(convertBytesToString(nftMetadata[2])).to.equal(units);
     });
 
     it("Should allow addr2 to access carbon credit NFT metadata for addr1's NFT", async function () {
@@ -88,14 +90,14 @@ describe("Carbon Credit NFT contract", function () {
 
       const projectName = "Project Green";
       const registryLink = "http://registry.example.com";
-      const units = 1000;
+      const units = "1000";
 
       await hardhatNFTCollection.mintCarbonCreditNFT(addr1.address, projectName, registryLink, units);
       const nftMetadata = await hardhatNFTCollection.connect(addr2).getCarbonCreditNFT('0x0000000000000000000000000000000000000000000000000000000000000001');
       
-      expect(nftMetadata[1]).to.equal(projectName);
-      expect(nftMetadata[2]).to.equal(registryLink);
-      expect(nftMetadata[3]).to.equal(units);
+      expect(convertBytesToString(nftMetadata[0])).to.equal(projectName);
+      expect(convertBytesToString(nftMetadata[1])).to.equal(registryLink);
+      expect(convertBytesToString(nftMetadata[2])).to.equal(units);
     });
 
     it("Should handle non-existent NFTs correctly", async function () {

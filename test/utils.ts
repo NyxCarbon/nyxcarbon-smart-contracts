@@ -16,3 +16,14 @@ export function generateEpochTimestamps(startDate = new Date(), numberOfPayments
 
   return timestamps;
 }
+
+export function convertBytesToString(bytesValue) {
+  // Remove the '0x' prefix and convert to a byte array
+  let bytes = new Uint8Array(bytesValue.substring(2).match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+
+  // Decode the bytes to a string
+  let decoder = new TextDecoder('utf-8');
+  let stringValue = decoder.decode(bytes);
+  
+  return stringValue;
+}
