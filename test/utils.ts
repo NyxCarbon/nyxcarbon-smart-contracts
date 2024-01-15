@@ -1,3 +1,8 @@
+export function subtractMonths(numOfMonths = 18, date = new Date()) {
+  date.setMonth(date.getMonth() - numOfMonths);
+  return date;
+}
+
 export function generateEpochTimestamps(startDate = new Date(), numberOfPayments = 36) {
   // Payments should be due at midnight
   startDate.setHours(0, 0, 0, 0);
