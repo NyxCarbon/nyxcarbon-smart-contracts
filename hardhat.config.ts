@@ -6,7 +6,7 @@ import "@openzeppelin/hardhat-upgrades";
 LoadEnv();
 
 const config: HardhatUserConfig = {
-  solidity: '0.8.9',
+  solidity: '0.8.12',
   networks: {
     luksoTestnet: {
       url: 'https://rpc.testnet.lukso.network',

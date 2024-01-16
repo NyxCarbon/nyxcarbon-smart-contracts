@@ -4,7 +4,7 @@ import {
   time,
   loadFixture,
 } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import { generateEpochTimestamps } from "../../utils";
+import { subtractMonths, generateEpochTimestamps } from "../../utils";
 
 describe("Non-Collateralized Loan Contract -- Native Token", function () {
   async function deployLoanFixture() {
@@ -409,7 +409,7 @@ describe("Non-Collateralized Loan Contract -- Native Token", function () {
       await hardhatLoan.connect(addr1).fundLoan({ value: ethers.parseEther(initialLoanAmount.toString()) });
       await hardhatLoan.setBorrower(addr2);
       await hardhatLoan.connect(addr2).acceptLoan();
-      await hardhatLoan.setPaymentSchedule(generateEpochTimestamps(new Date('2022-06-08')));
+      await hardhatLoan.setPaymentSchedule(generateEpochTimestamps(subtractMonths(18)));
       
       // Offchain calculations
       const offChainGrossMonthlyPayment = (Number(initialLoanAmount) * ((1 + ((Number(apy) / 100) / 1)) ** 3)) / 36;
@@ -438,7 +438,7 @@ describe("Non-Collateralized Loan Contract -- Native Token", function () {
       await hardhatLoan.connect(addr1).fundLoan({ value: ethers.parseEther(initialLoanAmount.toString()) });
       await hardhatLoan.setBorrower(addr2);
       await hardhatLoan.connect(addr2).acceptLoan();
-      const paymentSchedule = generateEpochTimestamps(new Date('2022-06-08'));
+      const paymentSchedule = generateEpochTimestamps(subtractMonths(18));
       await hardhatLoan.setPaymentSchedule(paymentSchedule);
 
       // Move time forward and pay off loan
@@ -461,7 +461,7 @@ describe("Non-Collateralized Loan Contract -- Native Token", function () {
       await hardhatLoan.connect(addr1).fundLoan({ value: ethers.parseEther(initialLoanAmount.toString()) });
       await hardhatLoan.setBorrower(addr2);
       await hardhatLoan.connect(addr2).acceptLoan();
-      await hardhatLoan.setPaymentSchedule(generateEpochTimestamps(new Date('2022-06-08')));
+      await hardhatLoan.setPaymentSchedule(generateEpochTimestamps(subtractMonths(18)));
       
       const [netMonthlyPayment, transactionFee] = await hardhatLoan.connect(addr2).calculateMonthlyPayment();
       expect(await hardhatLoan.connect(addr2).makePayment({ value: netMonthlyPayment + transactionFee }))
@@ -476,7 +476,7 @@ describe("Non-Collateralized Loan Contract -- Native Token", function () {
       await hardhatLoan.connect(addr1).fundLoan({ value: ethers.parseEther(initialLoanAmount.toString()) });
       await hardhatLoan.setBorrower(addr2);
       await hardhatLoan.connect(addr2).acceptLoan();
-      const paymentSchedule = generateEpochTimestamps(new Date('2022-06-08'));
+      const paymentSchedule = generateEpochTimestamps(subtractMonths(18));
       await hardhatLoan.setPaymentSchedule(paymentSchedule);
 
       // Move time forward and pay off loan

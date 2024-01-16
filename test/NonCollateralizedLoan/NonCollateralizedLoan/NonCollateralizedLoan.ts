@@ -4,7 +4,7 @@ import {
   time,
   loadFixture,
 } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import { generateEpochTimestamps } from "../../utils";
+import { subtractMonths, generateEpochTimestamps } from "../../utils";
 
 describe("Non-Collateralized Loan Contract -- LSP7/ECR20 Token", function () {
   async function deployLoanFixture() {
@@ -37,15 +37,15 @@ describe("Non-Collateralized Loan Contract -- LSP7/ECR20 Token", function () {
     await hardhatLoan.waitForDeployment();
 
     // Authorize operator to transfer 1M tokens for owner
-    await hardhatToken.revokeOperator(hardhatLoan.target, "0x");
+    await hardhatToken.revokeOperator(hardhatLoan.target, false, "0x");
     await hardhatToken.authorizeOperator(hardhatLoan.target, BigInt(1000000) * BigInt(1e18), "0x");
 
     // Authorize operator to transfer tokens 1M for addr1
-    await hardhatToken.connect(addr1).revokeOperator(hardhatLoan.target, "0x");
+    await hardhatToken.connect(addr1).revokeOperator(hardhatLoan.target, false, "0x");
     await hardhatToken.connect(addr1).authorizeOperator(hardhatLoan.target, BigInt(1000000) * BigInt(1e18), "0x");
 
     // Authorize operator to transfer tokens 1M for addr2
-    await hardhatToken.connect(addr2).revokeOperator(hardhatLoan.target, "0x");
+    await hardhatToken.connect(addr2).revokeOperator(hardhatLoan.target, false, "0x");
     await hardhatToken.connect(addr2).authorizeOperator(hardhatLoan.target, BigInt(1000000) * BigInt(1e18), "0x");
 
     // Mint additional .5M tokens for addr1 for funding loan
@@ -396,7 +396,7 @@ describe("Non-Collateralized Loan Contract -- LSP7/ECR20 Token", function () {
       await hardhatLoan.connect(addr1).fundLoan();
       await hardhatLoan.setBorrower(addr2);
       await hardhatLoan.connect(addr2).acceptLoan();
-      await hardhatLoan.setPaymentSchedule(generateEpochTimestamps(new Date('2022-06-08')));
+      await hardhatLoan.setPaymentSchedule(generateEpochTimestamps(subtractMonths(18)));
       
             // Offchain calculations
       const offChainGrossMonthlyPayment = (Number(initialLoanAmount) * ((1 + ((Number(apy) / 100) / 1)) ** 3)) / 36;
@@ -423,7 +423,7 @@ describe("Non-Collateralized Loan Contract -- LSP7/ECR20 Token", function () {
       await hardhatLoan.connect(addr1).fundLoan();
       await hardhatLoan.setBorrower(addr2);
       await hardhatLoan.connect(addr2).acceptLoan();
-      const paymentSchedule = generateEpochTimestamps(new Date('2022-06-08'));
+      const paymentSchedule = generateEpochTimestamps(subtractMonths(18));
       await hardhatLoan.setPaymentSchedule(paymentSchedule);
 
       // Transfer 500k tokens from owner to addr2 to account for profits to pay back loan + interest and to force owner balance to be 0
@@ -448,7 +448,7 @@ describe("Non-Collateralized Loan Contract -- LSP7/ECR20 Token", function () {
       await hardhatLoan.connect(addr1).fundLoan();
       await hardhatLoan.setBorrower(addr2);
       await hardhatLoan.connect(addr2).acceptLoan();
-      await hardhatLoan.setPaymentSchedule(generateEpochTimestamps(new Date('2022-06-08')));
+      await hardhatLoan.setPaymentSchedule(generateEpochTimestamps(subtractMonths(18)));
       
       const [netMonthlyPayment, transactionFee] = await hardhatLoan.connect(addr2).calculateMonthlyPayment();
       expect(await hardhatLoan.connect(addr2).makePayment())
@@ -463,7 +463,7 @@ describe("Non-Collateralized Loan Contract -- LSP7/ECR20 Token", function () {
       await hardhatLoan.connect(addr1).fundLoan();
       await hardhatLoan.setBorrower(addr2);
       await hardhatLoan.connect(addr2).acceptLoan();
-      const paymentSchedule = generateEpochTimestamps(new Date('2022-06-08'));
+      const paymentSchedule = generateEpochTimestamps(subtractMonths(18));
       await hardhatLoan.setPaymentSchedule(paymentSchedule);
 
       // Transfer 500k tokens from owner to addr2 to account for profits to pay back loan + interest and to force owner balance to be 0
