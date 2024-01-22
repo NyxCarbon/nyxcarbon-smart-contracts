@@ -1,3 +1,5 @@
+import Web3 from "web3";
+
 export function subtractMonths(numOfMonths = 18, date = new Date()) {
   date.setMonth(date.getMonth() - numOfMonths);
   return date;
@@ -31,4 +33,24 @@ export function convertBytesToString(bytesValue) {
   let stringValue = decoder.decode(bytes);
   
   return stringValue;
+}
+
+export function convertUInt256ToBytes(uint256Value) {
+  // Ensure the input is treated as a BigInt
+  let bigIntValue = BigInt(uint256Value);
+
+  // Convert the BigInt to a hexadecimal string
+  let hexString = bigIntValue.toString(16);
+
+  // Pad the string to ensure it represents 256 bits (64 hex characters)
+  let paddedHexString = hexString.padStart(64, '0');
+
+  // Convert the padded hexadecimal string to bytes and prefix with '0x'
+  return '0x' + paddedHexString;
+}
+
+export function createKeccak256Hash(dataKey) {
+  const web3 = new Web3();
+  const hash = web3.utils.soliditySha3(dataKey);
+  return hash
 }

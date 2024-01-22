@@ -19,6 +19,7 @@
     "@erc725/smart-contracts": "^6.0.0",
     "@lukso/lsp-factory.js": "^3.1.1",
     "@lukso/lsp-smart-contracts": "^0.14.0",
-    "@openzeppelin/contracts": "^4.9.3"
+    "@openzeppelin/contracts": "^4.9.3",
+    "web3": "^4.4.0"
   }
 }
