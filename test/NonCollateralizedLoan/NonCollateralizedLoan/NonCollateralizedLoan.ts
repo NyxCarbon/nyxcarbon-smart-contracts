@@ -429,17 +429,17 @@ describe("Non-Collateralized Loan Contract -- LSP7/ECR20 Token", function () {
     });
   });
 
-  // CALCULATE MONTHLY PAYMENT tests
+  // MAKE PAYMENT tests
   describe("Make Payment", function () {
     it("Should prevent borrower from making a payment because loan is not due yet", async function () {
-        const { hardhatLoan, addr1, addr2, tokenId1 } = await loadFixture(deployLoanFixture);
+      const { hardhatLoan, addr1, addr2, tokenId1 } = await loadFixture(deployLoanFixture);
       await hardhatLoan.connect(addr1).fundLoan(tokenId1);
       await hardhatLoan.setBorrower(tokenId1, addr2);
       await hardhatLoan.connect(addr2).acceptLoan(tokenId1);
 
-        // Set payment schedule to begin on 05.05.2025 
-        await hardhatLoan.setPaymentSchedule(tokenId1, generateEpochTimestamps());
-        await expect(hardhatLoan.connect(addr2).makePayment(tokenId1)).to.be.revertedWithCustomError(hardhatLoan, "PaymentNotDue");
+      // Set payment schedule to begin on 05.05.2025 
+      await hardhatLoan.setPaymentSchedule(tokenId1, generateEpochTimestamps());
+      await expect(hardhatLoan.connect(addr2).makePayment(tokenId1)).to.be.revertedWithCustomError(hardhatLoan, "PaymentNotDue");
     });
 
     it("Should not throw a zero balance error because the loan still has a balance", async function () {
@@ -458,7 +458,7 @@ describe("Non-Collateralized Loan Contract -- LSP7/ECR20 Token", function () {
       await hardhatLoan.connect(addr2).acceptLoan(tokenId1);
       await hardhatLoan.setPaymentSchedule(tokenId1, generateEpochTimestamps(subtractMonths(18)));
       
-            // Offchain calculations
+      // Offchain calculations
       const offChainGrossMonthlyPayment = (Number(initialLoanAmount) * ((1 + ((Number(apy) / 100) / 1)) ** 3)) / 36;
       const offChainTransactionFee = offChainGrossMonthlyPayment * (Number(transactionBPS) / 10000);
       const offChainNetMonthlyPayment = offChainGrossMonthlyPayment - offChainTransactionFee;

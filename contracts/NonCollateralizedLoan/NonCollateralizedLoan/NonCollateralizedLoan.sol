@@ -3,16 +3,16 @@ pragma solidity ^0.8.4;
 
 // modules
 import {INonCollateralizedLoan} from "./INonCollateralizedLoan.sol";
-import {NonCollateralizedLoanNFT} from "./NonCollaterlizedLoanNFT.sol";
+import {NonCollateralizedLoanNFT} from "../NonCollateralizedLoanNFT/NonCollaterlizedLoanNFT.sol";
 import {PaymentNotDue, ZeroBalanceOnLoan, ActionNotAllowedInCurrentState, ActionNotAllowedInCurrentStates, Unauthorized} from "../NonCollateralizedLoanErrors.sol";
 import {LSP7Mintable} from "@lukso/lsp-smart-contracts/contracts/LSP7DigitalAsset/presets/LSP7Mintable.sol";
 import {LoanState} from "../LoanEnums.sol";
-import "./LoanMath.sol";
+import "../LoanMath.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 // constants
-import {_NYX_INITIAL_LOAN_AMOUNT, _NYX_LOAN_APY, _NYX_AMORITIZATION_PERIOD, _NYX_LOCKUP_PERIOD, _NYX_TRANSACTION_BPS, _NYX_TOKEN_ADDRESS, _NYX_LENDER, _NYX_BORROWER, _NYX_CARBON_CREDITS_GENERATED, _NYX_CARBON_CREDITS_BALANCE, _NYX_CARBON_CREDITS_PRICE, _NYX_LOAN_BALANCE, _NYX_LOAN_STATUS, _NYX_PAYMENT_INDEX} from "./constants.sol";
+import {_NYX_INITIAL_LOAN_AMOUNT, _NYX_LOAN_APY, _NYX_AMORITIZATION_PERIOD, _NYX_LOCKUP_PERIOD, _NYX_TRANSACTION_BPS, _NYX_TOKEN_ADDRESS, _NYX_LENDER, _NYX_BORROWER, _NYX_CARBON_CREDITS_GENERATED, _NYX_CARBON_CREDITS_BALANCE, _NYX_CARBON_CREDITS_PRICE, _NYX_LOAN_BALANCE, _NYX_LOAN_STATUS, _NYX_PAYMENT_INDEX} from "../NonCollateralizedLoanNFT/constants.sol";
 
 contract NonCollateralizedLoan is INonCollateralizedLoan, Ownable {
     using Counters for Counters.Counter;
@@ -107,6 +107,37 @@ contract NonCollateralizedLoan is INonCollateralizedLoan, Ownable {
         bytes memory dataValue
     ) public onlyOwner {
         nftContract.setDataForTokenId(bytes32(tokenId), dataKey, dataValue);
+    }
+
+    function calculatePayment(
+        uint256 tokenId
+    ) public view returns (uint256, uint256) {
+        uint256 amortizationPeriodInMonths = nftContract.getDecodedUint256(
+            tokenId,
+            _NYX_AMORITIZATION_PERIOD
+        );
+
+        uint256 transactionBps = nftContract.getDecodedUint256(
+            tokenId,
+            _NYX_TRANSACTION_BPS
+        );
+
+        uint256 paymentIndex = nftContract.getDecodedUint256(
+            tokenId,
+            _NYX_PAYMENT_INDEX
+        );
+
+        uint256 loanCurrentBalance = nftContract.getDecodedUint256(
+            tokenId,
+            _NYX_LOAN_BALANCE
+        );
+
+        return
+            LoanMath.calculateMonthlyPayment(
+                loanCurrentBalance,
+                transactionBps,
+                amortizationPeriodInMonths - paymentIndex
+            );
     }
 
     // LOAN FUNCTIONS
