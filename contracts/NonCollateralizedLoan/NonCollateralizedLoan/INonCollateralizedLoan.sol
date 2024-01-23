@@ -124,11 +124,11 @@ interface INonCollateralizedLoan {
     event LoanNoLongerSwappable(int256 expectedProfitPercentage);
 
     // --- Loan Functionality
-    function fundLoan() external;
+    function fundLoan(uint256 tokenId) external;
 
-    function acceptLoan() external;
+    function acceptLoan(uint256 tokenId) external;
 
-    function makePayment() external;
+    function makePayment(uint256 tokenId) external;
 
-    function liquidiateLoan() external;
+    function liquidiateLoan(uint256 tokenId) external;
 }
