@@ -183,6 +183,7 @@ contract NonCollateralizedLoan is INonCollateralizedLoan, Ownable {
         //     )
         // );
         // require(success, "Delegate call failed");
+        emit LoanCreated(newTokenId);
         return newTokenId;
     }
 

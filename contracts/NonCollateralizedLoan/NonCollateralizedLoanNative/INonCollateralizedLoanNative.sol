@@ -7,6 +7,12 @@ pragma solidity ^0.8.4;
 interface INonCollateralizedLoanNative {
     // --- Events
     /**
+     * @dev Emitted when a Loan NFT has been created.
+     * @param tokenId The tokenId representing the loan that was created.
+     */
+    event LoanCreated(uint256 indexed tokenId);
+
+    /**
      * @dev Emitted when the `from` transferred successfully `amount` of tokens to the loan contract and loan state is set to Funded.
      * @param operator The address of the operator that executed the transfer.
      * @param from The address which tokens were sent from (balance decreased by `-amount`).

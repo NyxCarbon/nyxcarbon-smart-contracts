@@ -162,6 +162,7 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
             _carbonCreditPrice
         );
 
+        emit LoanCreated(newTokenId);
         return newTokenId;
     }
 
