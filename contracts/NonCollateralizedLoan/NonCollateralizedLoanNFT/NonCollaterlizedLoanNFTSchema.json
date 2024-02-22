@@ -1,0 +1,100 @@
+[
+    {
+        "name": "NYXInitialLoanAmount",
+        "key": "0x6c0accaca6d414cfc7227817f26f010988cc73e73753912fdfaa53a8a58da914",
+        "keyType": "Singleton",
+        "valueType": "string",
+        "valueContent": "String"
+    },
+    {
+        "name": "NYXAPY",
+        "key": "0x78d218f6ee1acec3eb94fd399955647e3d3cf4fff724a330ea1b9319f4227987",
+        "keyType": "Singleton",
+        "valueType": "string",
+        "valueContent": "String"
+    },
+    {
+        "name": "NYXAmoritizationPeriod",
+        "key": "0x78b9eab38bd360a7d56421736185c4bffbaa8c2426818c5a452ceef95cd2ee12",
+        "keyType": "Singleton",
+        "valueType": "string",
+        "valueContent": "String"
+    },
+    {
+        "name": "NYXLockUpPeriod",
+        "key": "0xd2c813959a88e7ffdd26dc5c53e35530524c82e9e859d05e4100edf872e6eae8",
+        "keyType": "Singleton",
+        "valueType": "string",
+        "valueContent": "String"
+    },
+    {
+        "name": "NYXTransactionBPS",
+        "key": "0x1ba0268702881be375d205d3625ad7323251c804279ea5e29c5c26d14662c059",
+        "keyType": "Singleton",
+        "valueType": "string",
+        "valueContent": "String"
+    },
+    {
+        "name": "NYXTokenAddress",
+        "key": "0xd6d697ba2d2327a4872ce9802ad872e2d7c1b2cb0008c15e429ebbc7bcfbe064",
+        "keyType": "Singleton",
+        "valueType": "string",
+        "valueContent": "String"
+    },
+    {
+        "name": "NYXLender",
+        "key": "0x3d4ae42dee4156a448efc6820621c2bb68ddb71f0a85333f1c5ac246fc70519d",
+        "keyType": "Singleton",
+        "valueType": "string",
+        "valueContent": "String"
+    },
+    {
+        "name": "NYXBorrower",
+        "key": "0x85749acc807d69123d0d5506d4f50090a074aeb2606b3c24031343bc2fe32ae9",
+        "keyType": "Singleton",
+        "valueType": "string",
+        "valueContent": "String"
+    },
+    {
+        "name": "NYXCarbonCreditsGenerated",
+        "key": "0xaff400b8dd368967e7bb6a8ff09806b22b93b3e16cca7603c6ce06484282f484",
+        "keyType": "Singleton",
+        "valueType": "string",
+        "valueContent": "String"
+    },
+    {
+        "name": "NYXCarbonCreditBalance",
+        "key": "0x0fbaf537829b456ea9ce20bff34b6432649b4d01046f31011b072b99544cb3ba",
+        "keyType": "Singleton",
+        "valueType": "string",
+        "valueContent": "String"
+    },
+    {
+        "name": "NYXCarbonCreditPrice",
+        "key": "0xb4e1b4bb03c6bb36721dd0e4bd146c5ee9147d48dc420a622fa88a43b13cb04a",
+        "keyType": "Singleton",
+        "valueType": "string",
+        "valueContent": "String"
+    },
+    {
+        "name": "NYXLoanBalance",
+        "key": "0xa47b9177880a98391d6c9d9c68ce411d4e34d069439077790d5e35de0e929262",
+        "keyType": "Singleton",
+        "valueType": "string",
+        "valueContent": "String"
+    },
+    {
+        "name": "NYXLoanStatus",
+        "key": "0x4832cf0e94b7269e1cfb3481a8a7cb077570a24dba26f74290b300d0a11ff694",
+        "keyType": "Singleton",
+        "valueType": "string",
+        "valueContent": "String"
+    },
+    {
+        "name": "NYXPaymentIndex",
+        "key": "0x2776cbcfd8490f894b0f24452a3c0cd4be0b007bd35e9a31d338400b8d8635ab",
+        "keyType": "Singleton",
+        "valueType": "string",
+        "valueContent": "String"
+    }
+]

@@ -1,0 +1,23 @@
+[
+    {
+        "name": "NYXCCProjectName",
+        "key": "0x0bd424a9e4db82735f455a47a9ccd2034520f327f77da452f65cf43ef97b1cb7",
+        "keyType": "Singleton",
+        "valueType": "string",
+        "valueContent": "String"
+    },
+    {
+        "name": "NYXCCRegistryLink",
+        "key": "0x47ef5574948b1e1f8506aed6ee3b2087a4f961f52c5f1464228c84faaac3cdf6",
+        "keyType": "Singleton",
+        "valueType": "string",
+        "valueContent": "String"
+    },
+    {
+        "name": "NYXCCUnits",
+        "key": "0xca1e2adc4ad3abb96f2c6b7e94405d7c1355a73efbeafbdf2ea4001547c29d4d",
+        "keyType": "Singleton",
+        "valueType": "string",
+        "valueContent": "String"
+    }
+]
