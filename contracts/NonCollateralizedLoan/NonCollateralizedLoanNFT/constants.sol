@@ -44,3 +44,9 @@ bytes32 constant _NYX_LOAN_STATUS = 0x4832cf0e94b7269e1cfb3481a8a7cb077570a24dba
 
 // keccak256('NYXPaymentIndex')
 bytes32 constant _NYX_PAYMENT_INDEX = 0x2776cbcfd8490f894b0f24452a3c0cd4be0b007bd35e9a31d338400b8d8635ab;
+
+// keccak256('NYXCADTProjectName')
+bytes32 constant _NYX_CADT_PROJECT_NAME = 0x98199bc97b113a64023a60ced2e5d698bfde533b56b4c126643fad99700b1f15;
+
+// keccak256('NYXCADTRegistryLink')
+bytes32 constant _NYX_CADT_REGISTRY_LINK = 0x2ea835a0a77db3df9aa833b6e826b3f23a7f742036378de91f4fc345311e0945;

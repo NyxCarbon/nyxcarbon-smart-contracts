@@ -96,5 +96,19 @@
         "keyType": "Singleton",
         "valueType": "string",
         "valueContent": "String"
+    },
+    {
+        "name": "NYXCADTProjectName",
+        "key": "0x98199bc97b113a64023a60ced2e5d698bfde533b56b4c126643fad99700b1f15",
+        "keyType": "Singleton",
+        "valueType": "string",
+        "valueContent": "String"
+    },
+    {
+        "name": "NYXCADTRegistryLink",
+        "key": "0x2ea835a0a77db3df9aa833b6e826b3f23a7f742036378de91f4fc345311e0945",
+        "keyType": "Singleton",
+        "valueType": "string",
+        "valueContent": "String"
     }
 ]
