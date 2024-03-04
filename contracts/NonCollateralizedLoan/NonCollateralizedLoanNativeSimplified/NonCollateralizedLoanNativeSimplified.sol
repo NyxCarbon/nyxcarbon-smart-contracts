@@ -224,6 +224,11 @@ contract NonCollateralizedLoanNativeSimplified is
             );
             emit LoanSwappable(carbonCreditBalance, profit, profitPercentage);
         } else {
+            loanNFTContract.setDataForTokenId(
+                bytes32(tokenId),
+                _NYX_LOAN_STATUS,
+                abi.encode(LoanState.Taken)
+            );
             emit LoanNotSwappable(
                 carbonCreditBalance,
                 profit,
