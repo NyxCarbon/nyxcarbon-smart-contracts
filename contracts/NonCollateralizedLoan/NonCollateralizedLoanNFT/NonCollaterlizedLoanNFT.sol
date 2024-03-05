@@ -87,7 +87,7 @@ contract NonCollateralizedLoanNFT is LSP8Mintable {
         dataValues[7] = abi.encode(_carbonCreditsGenerated);
         dataValues[8] = abi.encode(_carbonCreditsGenerated);
         dataValues[9] = abi.encode(_initialLoanAmount * 1e18);
-        dataValues[10] = abi.encode(LoanState.Taken);
+        dataValues[10] = abi.encode(LoanState.Created);
         dataValues[11] = abi.encode(0);
         dataValues[12] = bytes(_cadtProjectName);
         dataValues[13] = bytes(_cadtRegistryLink);

@@ -4,6 +4,7 @@ pragma solidity ^0.8.4;
 // modules
 import {INonCollateralizedLoanNative} from "./INonCollateralizedLoanNative.sol";
 import {NonCollateralizedLoanNFT} from "../NonCollateralizedLoanNFT/NonCollaterlizedLoanNFT.sol";
+import {CarbonCreditNFTCollection} from "../../CarbonCreditNFTCollection/CarbonCreditNFTCollection.sol";
 import {PaymentNotDue, ZeroBalanceOnLoan, ActionNotAllowedInCurrentState, ActionNotAllowedInCurrentStates, Unauthorized} from "../NonCollateralizedLoanErrors.sol";
 import {LoanState} from "../LoanEnums.sol";
 import "../LoanMath.sol";
@@ -11,25 +12,33 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 // constants
-import {_NYX_INITIAL_LOAN_AMOUNT, _NYX_LOAN_APY, _NYX_AMORITIZATION_PERIOD, _NYX_LOCKUP_PERIOD, _NYX_TRANSACTION_BPS, _NYX_TOKEN_ADDRESS, _NYX_LENDER, _NYX_BORROWER, _NYX_CARBON_CREDITS_GENERATED, _NYX_CARBON_CREDITS_BALANCE, _NYX_CARBON_CREDITS_PRICE, _NYX_LOAN_BALANCE, _NYX_LOAN_STATUS, _NYX_PAYMENT_INDEX} from "../NonCollateralizedLoanNFT/constants.sol";
+import {_NYX_INITIAL_LOAN_AMOUNT, _NYX_LOAN_APY, _NYX_AMORITIZATION_PERIOD, _NYX_LOCKUP_PERIOD, _NYX_TRANSACTION_BPS, _NYX_TOKEN_ADDRESS, _NYX_LENDER, _NYX_BORROWER, _NYX_CARBON_CREDITS_GENERATED, _NYX_CARBON_CREDITS_BALANCE, _NYX_CARBON_CREDITS_PRICE, _NYX_LOAN_BALANCE, _NYX_LOAN_STATUS, _NYX_PAYMENT_INDEX, _NYX_CADT_PROJECT_NAME, _NYX_CADT_REGISTRY_LINK} from "../NonCollateralizedLoanNFT/constants.sol";
 
 contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
 
-    NonCollateralizedLoanNFT public nftContract;
-    uint256 public balance;
+    NonCollateralizedLoanNFT public loanNFTContract;
+    CarbonCreditNFTCollection public carbonCreditNFTContract;
+
     int256 public carbonCreditPrice;
+    mapping(uint256 => uint256) public balance;
     mapping(uint256 => uint256[]) public paymentSchedules;
 
-    constructor(address payable nftContractAddress) {
-        nftContract = NonCollateralizedLoanNFT(nftContractAddress);
+    constructor(
+        address payable loanNFTContractAddress,
+        address payable carbonCreditNFTContractAddress
+    ) {
+        loanNFTContract = NonCollateralizedLoanNFT(loanNFTContractAddress);
+        carbonCreditNFTContract = CarbonCreditNFTCollection(
+            carbonCreditNFTContractAddress
+        );
     }
 
     // PERMISSIONS MODIFIERS
     modifier onlyInState(uint256 tokenId, LoanState expectedState) {
         LoanState currentLoanState = LoanState(
-            nftContract.getDecodedUint256(tokenId, _NYX_LOAN_STATUS)
+            loanNFTContract.getDecodedUint256(tokenId, _NYX_LOAN_STATUS)
         );
         if (currentLoanState != expectedState)
             revert ActionNotAllowedInCurrentState(
@@ -45,7 +54,7 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
         LoanState expectedState2
     ) {
         LoanState currentLoanState = LoanState(
-            nftContract.getDecodedUint256(tokenId, _NYX_LOAN_STATUS)
+            loanNFTContract.getDecodedUint256(tokenId, _NYX_LOAN_STATUS)
         );
         if (
             currentLoanState != expectedState1 &&
@@ -60,14 +69,18 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
     }
 
     modifier onlyLender(uint256 tokenId) {
-        if (msg.sender != nftContract.getDecodedAddress(tokenId, _NYX_LENDER))
-            revert Unauthorized(msg.sender);
+        if (
+            msg.sender !=
+            loanNFTContract.getDecodedAddress(tokenId, _NYX_LENDER)
+        ) revert Unauthorized(msg.sender);
         _;
     }
 
     modifier onlyBorrower(uint256 tokenId) {
-        if (msg.sender != nftContract.getDecodedAddress(tokenId, _NYX_BORROWER))
-            revert Unauthorized(msg.sender);
+        if (
+            msg.sender !=
+            loanNFTContract.getDecodedAddress(tokenId, _NYX_BORROWER)
+        ) revert Unauthorized(msg.sender);
         _;
     }
 
@@ -76,7 +89,7 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
     }
 
     function setBorrower(uint256 tokenId, address _borrower) public onlyOwner {
-        nftContract.setDataForTokenId(
+        loanNFTContract.setDataForTokenId(
             bytes32(tokenId),
             _NYX_BORROWER,
             abi.encode(_borrower)
@@ -101,28 +114,28 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
         bytes32 dataKey,
         bytes memory dataValue
     ) public onlyOwner {
-        nftContract.setDataForTokenId(bytes32(tokenId), dataKey, dataValue);
+        loanNFTContract.setDataForTokenId(bytes32(tokenId), dataKey, dataValue);
     }
 
     function calculatePayment(
         uint256 tokenId
     ) public view returns (uint256, uint256) {
-        uint256 amortizationPeriodInMonths = nftContract.getDecodedUint256(
+        uint256 amortizationPeriodInMonths = loanNFTContract.getDecodedUint256(
             tokenId,
             _NYX_AMORITIZATION_PERIOD
         );
 
-        uint256 transactionBps = nftContract.getDecodedUint256(
+        uint256 transactionBps = loanNFTContract.getDecodedUint256(
             tokenId,
             _NYX_TRANSACTION_BPS
         );
 
-        uint256 paymentIndex = nftContract.getDecodedUint256(
+        uint256 paymentIndex = loanNFTContract.getDecodedUint256(
             tokenId,
             _NYX_PAYMENT_INDEX
         );
 
-        uint256 loanCurrentBalance = nftContract.getDecodedUint256(
+        uint256 loanCurrentBalance = loanNFTContract.getDecodedUint256(
             tokenId,
             _NYX_LOAN_BALANCE
         );
@@ -137,29 +150,37 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
 
     // LOAN FUNCTIONS
     function createLoan(
-        uint256 _initialLoanAmount,
-        uint256 _apy,
-        uint256 _amortizationPeriodInMonths,
-        uint256 _lockUpPeriodInMonths,
-        uint256 _transactionBps,
-        address payable _lender,
-        int256 _carbonCreditsGenerated,
-        int256 _carbonCreditPrice
+        LoanParams memory loanParams,
+        string memory _cadtProjectName,
+        string memory _cadtRegistryLink
     ) public onlyOwner returns (uint256) {
         _tokenIds.increment();
         uint256 newTokenId = _tokenIds.current();
 
         // Call mintNFT
-        nftContract.mintNFT(
+        loanNFTContract.mintNFT(
             newTokenId,
-            _initialLoanAmount,
-            _apy,
-            _amortizationPeriodInMonths,
-            _lockUpPeriodInMonths,
-            _transactionBps,
-            _lender,
-            _carbonCreditsGenerated,
-            _carbonCreditPrice
+            loanParams.initialLoanAmount,
+            loanParams.apy,
+            loanParams.amortizationPeriodInMonths,
+            loanParams.lockUpPeriodInMonths,
+            loanParams.transactionBps,
+            loanParams.lender,
+            loanParams.borrower,
+            loanParams.carbonCreditsGenerated,
+            _cadtProjectName,
+            _cadtRegistryLink
+        );
+
+        loanNFTContract.setDataForTokenId(
+            bytes32(newTokenId),
+            _NYX_LOAN_BALANCE,
+            abi.encode(
+                LoanMath.calculateTotalLoanValue(
+                    loanParams.initialLoanAmount * 1e18,
+                    loanParams.apy * 1e18
+                )
+            )
         );
 
         emit LoanCreated(newTokenId);
@@ -177,12 +198,15 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
         onlyInState(tokenId, LoanState.Created)
     {
         // Retrieve NFT metadata from ERC725Y
-        uint256 initialLoanAmount = nftContract.getDecodedUint256(
+        uint256 initialLoanAmount = loanNFTContract.getDecodedUint256(
             tokenId,
             _NYX_INITIAL_LOAN_AMOUNT
         );
-        uint256 apy = nftContract.getDecodedUint256(tokenId, _NYX_LOAN_APY);
-        address lender = nftContract.getDecodedAddress(tokenId, _NYX_LENDER);
+        uint256 apy = loanNFTContract.getDecodedUint256(tokenId, _NYX_LOAN_APY);
+        address lender = loanNFTContract.getDecodedAddress(
+            tokenId,
+            _NYX_LENDER
+        );
 
         // Ensure that the tx contains enough LYX to fund the loan
         require(
@@ -191,16 +215,16 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
         );
 
         // Add LYX to contract storage
-        balance += msg.value;
+        balance[tokenId] += msg.value;
 
         // Calculate total loan value and update _NYX_LOAN_BALANCE and _NYX_LOAN_STATUS
-        nftContract.setDataForTokenId(
+        loanNFTContract.setDataForTokenId(
             bytes32(tokenId),
             _NYX_LOAN_BALANCE,
             abi.encode(LoanMath.calculateTotalLoanValue(initialLoanAmount, apy))
         );
 
-        nftContract.setDataForTokenId(
+        loanNFTContract.setDataForTokenId(
             bytes32(tokenId),
             _NYX_LOAN_STATUS,
             abi.encode(LoanState.Funded)
@@ -226,11 +250,11 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
         onlyBorrower(tokenId)
         onlyInState(tokenId, LoanState.Funded)
     {
-        uint256 amountToTransfer = balance;
-        balance = 0; // Set the balance to zero before the transfer to prevent reentrancy
+        uint256 amountToTransfer = balance[tokenId];
+        balance[tokenId] = 0; // Set the balance to zero before the transfer to prevent reentrancy
 
         // Retrieve borrower from ERC725Y
-        address borrower = nftContract.getDecodedAddress(
+        address borrower = loanNFTContract.getDecodedAddress(
             tokenId,
             _NYX_BORROWER
         );
@@ -238,7 +262,7 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
         (bool success, ) = payable(borrower).call{value: amountToTransfer}("");
         require(success, "Transfer failed");
 
-        nftContract.setDataForTokenId(
+        loanNFTContract.setDataForTokenId(
             bytes32(tokenId),
             _NYX_LOAN_STATUS,
             abi.encode(LoanState.Taken)
@@ -261,12 +285,12 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
         onlyOwner
         onlyInStates(tokenId, LoanState.Taken, LoanState.Swappable)
     {
-        uint256 initialLoanAmount = nftContract.getDecodedUint256(
+        uint256 initialLoanAmount = loanNFTContract.getDecodedUint256(
             tokenId,
             _NYX_INITIAL_LOAN_AMOUNT
         );
 
-        int256 carbonCreditBalance = nftContract.getDecodedInt256(
+        int256 carbonCreditBalance = loanNFTContract.getDecodedInt256(
             tokenId,
             _NYX_CARBON_CREDITS_BALANCE
         );
@@ -276,25 +300,31 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
             carbonCreditBalance,
             carbonCreditPrice
         );
+
         int256 profitPercentage = (profit * 10000) / int(initialLoanAmount);
 
         // execute swap if profit percentage is greater than 53%
         // else place loan in swappable state
         if (profitPercentage > 5300) {
-            nftContract.setDataForTokenId(
+            loanNFTContract.setDataForTokenId(
                 bytes32(tokenId),
                 _NYX_LOAN_STATUS,
                 abi.encode(LoanState.Swappable)
             );
             executeSwap(tokenId);
         } else if (profitPercentage > 3200) {
-            nftContract.setDataForTokenId(
+            loanNFTContract.setDataForTokenId(
                 bytes32(tokenId),
                 _NYX_LOAN_STATUS,
                 abi.encode(LoanState.Swappable)
             );
             emit LoanSwappable(carbonCreditBalance, profit, profitPercentage);
         } else {
+            loanNFTContract.setDataForTokenId(
+                bytes32(tokenId),
+                _NYX_LOAN_STATUS,
+                abi.encode(LoanState.Taken)
+            );
             emit LoanNotSwappable(
                 carbonCreditBalance,
                 profit,
@@ -306,12 +336,12 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
     function executeSwap(
         uint256 tokenId
     ) public onlyOwner onlyInState(tokenId, LoanState.Swappable) {
-        uint256 initialLoanAmount = nftContract.getDecodedUint256(
+        uint256 initialLoanAmount = loanNFTContract.getDecodedUint256(
             tokenId,
             _NYX_INITIAL_LOAN_AMOUNT
         );
 
-        int256 carbonCreditBalance = nftContract.getDecodedInt256(
+        int256 carbonCreditBalance = loanNFTContract.getDecodedInt256(
             tokenId,
             _NYX_CARBON_CREDITS_BALANCE
         );
@@ -321,23 +351,49 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
             carbonCreditBalance,
             carbonCreditPrice
         );
+
         int256 profitPercentage = (profit * 10000) / int(initialLoanAmount);
 
         // Ensure the profit is still greater than 32% at time of execution
         if (profitPercentage <= 3200) {
-            nftContract.setDataForTokenId(
+            loanNFTContract.setDataForTokenId(
                 bytes32(tokenId),
                 _NYX_LOAN_STATUS,
                 abi.encode(LoanState.Taken)
             );
+
             emit LoanNoLongerSwappable(profitPercentage);
         } else {
-            nftContract.setDataForTokenId(
+            // Get CADT project name, CADT registry link, and lender address
+            string memory cadtProjectName = loanNFTContract.getDecodedString(
+                tokenId,
+                _NYX_CADT_PROJECT_NAME
+            );
+
+            string memory cadtRegistryLink = loanNFTContract.getDecodedString(
+                tokenId,
+                _NYX_CADT_REGISTRY_LINK
+            );
+
+            address lender = loanNFTContract.getDecodedAddress(
+                tokenId,
+                _NYX_LENDER
+            );
+
+            // Mint carbon credit NFT
+            carbonCreditNFTContract.mintCarbonCreditNFT(
+                lender,
+                cadtProjectName,
+                cadtRegistryLink,
+                carbonCreditBalance
+            );
+
+            loanNFTContract.setDataForTokenId(
                 bytes32(tokenId),
                 _NYX_LOAN_BALANCE,
                 abi.encode(0)
             );
-            nftContract.setDataForTokenId(
+            loanNFTContract.setDataForTokenId(
                 bytes32(tokenId),
                 _NYX_LOAN_STATUS,
                 abi.encode(LoanState.Swapped)
@@ -358,21 +414,22 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
     {
         uint256[] storage paymentSchedule = paymentSchedules[tokenId];
 
-        uint256 amortizationPeriodInMonths = nftContract.getDecodedUint256(
+        uint256 amortizationPeriodInMonths = loanNFTContract.getDecodedUint256(
             tokenId,
             _NYX_AMORITIZATION_PERIOD
         );
 
-        uint256 transactionBps = nftContract.getDecodedUint256(
+        uint256 transactionBps = loanNFTContract.getDecodedUint256(
             tokenId,
             _NYX_TRANSACTION_BPS
         );
 
-        uint256 paymentIndex = nftContract.getDecodedUint256(
+        uint256 paymentIndex = loanNFTContract.getDecodedUint256(
             tokenId,
             _NYX_PAYMENT_INDEX
         );
-        uint256 loanCurrentBalance = nftContract.getDecodedUint256(
+
+        uint256 loanCurrentBalance = loanNFTContract.getDecodedUint256(
             tokenId,
             _NYX_LOAN_BALANCE
         );
@@ -402,8 +459,11 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
         );
 
         // Transfer netMonthlyPayment to the lender
-        address lender = nftContract.getDecodedAddress(tokenId, _NYX_LENDER);
-        address borrower = nftContract.getDecodedAddress(
+        address lender = loanNFTContract.getDecodedAddress(
+            tokenId,
+            _NYX_LENDER
+        );
+        address borrower = loanNFTContract.getDecodedAddress(
             tokenId,
             _NYX_BORROWER
         );
@@ -431,7 +491,7 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
 
         // Update loan balance
         loanCurrentBalance -= (netMonthlyPayment + transactionFee);
-        nftContract.setDataForTokenId(
+        loanNFTContract.setDataForTokenId(
             bytes32(tokenId),
             _NYX_LOAN_BALANCE,
             abi.encode(loanCurrentBalance)
@@ -439,7 +499,7 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
 
         // Update payment index
         paymentIndex += 1;
-        nftContract.setDataForTokenId(
+        loanNFTContract.setDataForTokenId(
             bytes32(tokenId),
             _NYX_PAYMENT_INDEX,
             abi.encode(paymentIndex)
@@ -449,7 +509,7 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
             paymentIndex >= amortizationPeriodInMonths ||
             loanCurrentBalance <= 0
         ) {
-            nftContract.setDataForTokenId(
+            loanNFTContract.setDataForTokenId(
                 bytes32(tokenId),
                 _NYX_LOAN_STATUS,
                 abi.encode(LoanState.Repayed)
@@ -467,20 +527,23 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
         onlyLender(tokenId)
         onlyInState(tokenId, LoanState.Funded)
     {
-        uint256 initialLoanAmount = nftContract.getDecodedUint256(
+        uint256 initialLoanAmount = loanNFTContract.getDecodedUint256(
             tokenId,
             _NYX_INITIAL_LOAN_AMOUNT
         );
 
-        address lender = nftContract.getDecodedAddress(tokenId, _NYX_LENDER);
+        address lender = loanNFTContract.getDecodedAddress(
+            tokenId,
+            _NYX_LENDER
+        );
 
-        uint256 amount = balance;
-        balance = 0; // Set balance to 0 before the external call
+        uint256 amount = balance[tokenId];
+        balance[tokenId] = 0; // Set balance to 0 before the external call
 
         (bool success, ) = msg.sender.call{value: amount}("");
         require(success, "Failed to liquidate loan");
 
-        nftContract.setDataForTokenId(
+        loanNFTContract.setDataForTokenId(
             bytes32(tokenId),
             _NYX_LOAN_STATUS,
             abi.encode(LoanState.Liquidated)

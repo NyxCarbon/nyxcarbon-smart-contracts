@@ -5,7 +5,7 @@ import {
   loadFixture,
 } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
-import { convertBytesToString } from "../utils";
+import { convertBytesToInt256, convertBytesToString } from "../utils";
 
 
 describe("Carbon Credit NFT contract", function () {
@@ -75,14 +75,15 @@ describe("Carbon Credit NFT contract", function () {
 
       const projectName = "Project Green";
       const registryLink = "http://registry.example.com";
-      const units = "1000";
+      const units = 1000;
 
       const tokenId = await hardhatNFTCollection.mintCarbonCreditNFT(addr1.address, projectName, registryLink, units);
       const nftMetadata = await hardhatNFTCollection.getCarbonCreditNFT('0x0000000000000000000000000000000000000000000000000000000000000001');
-      
+      const meta1 = convertBytesToInt256(nftMetadata[2]);
+
       expect(convertBytesToString(nftMetadata[0])).to.equal(projectName);
       expect(convertBytesToString(nftMetadata[1])).to.equal(registryLink);
-      expect(convertBytesToString(nftMetadata[2])).to.equal(units);
+      expect(convertBytesToInt256(nftMetadata[2])).to.equal(units);
     });
 
     it("Should allow addr2 to access carbon credit NFT metadata for addr1's NFT", async function () {
@@ -90,14 +91,14 @@ describe("Carbon Credit NFT contract", function () {
 
       const projectName = "Project Green";
       const registryLink = "http://registry.example.com";
-      const units = "1000";
+      const units = 1000;
 
       await hardhatNFTCollection.mintCarbonCreditNFT(addr1.address, projectName, registryLink, units);
       const nftMetadata = await hardhatNFTCollection.connect(addr2).getCarbonCreditNFT('0x0000000000000000000000000000000000000000000000000000000000000001');
       
       expect(convertBytesToString(nftMetadata[0])).to.equal(projectName);
       expect(convertBytesToString(nftMetadata[1])).to.equal(registryLink);
-      expect(convertBytesToString(nftMetadata[2])).to.equal(units);
+      expect(convertBytesToInt256(nftMetadata[2])).to.equal(units);
     });
 
     it("Should handle non-existent NFTs correctly", async function () {

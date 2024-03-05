@@ -129,6 +129,17 @@ interface INonCollateralizedLoan {
      */
     event LoanNoLongerSwappable(int256 expectedProfitPercentage);
 
+    struct LoanParams {
+        uint256 initialLoanAmount;
+        uint256 apy;
+        uint256 amortizationPeriodInMonths;
+        uint256 lockUpPeriodInMonths;
+        uint256 transactionBps;
+        address payable lender;
+        address payable borrower;
+        int256 carbonCreditsGenerated;
+    }
+
     // --- Loan Functionality
     function fundLoan(uint256 tokenId) external;
 

@@ -178,6 +178,12 @@ contract NonCollateralizedLoanNativeSimplified is
             )
         );
 
+        loanNFTContract.setDataForTokenId(
+            bytes32(newTokenId),
+            _NYX_LOAN_STATUS,
+            abi.encode(LoanState.Taken)
+        );
+
         emit LoanCreated(newTokenId);
         return newTokenId;
     }
