@@ -19,7 +19,7 @@ contract CarbonCreditNFTCollection is LSP8Mintable {
         uint256 id,
         string projectName,
         string registryLink,
-        string units
+        int256 units
     );
 
     constructor(
@@ -40,7 +40,7 @@ contract CarbonCreditNFTCollection is LSP8Mintable {
         address to,
         string memory projectName,
         string memory registryLink,
-        string memory units
+        int256 units
     ) external returns (uint256) {
         _tokenIds.increment();
         uint256 newTokenId = _tokenIds.current();
@@ -64,7 +64,7 @@ contract CarbonCreditNFTCollection is LSP8Mintable {
 
         dataValues[0] = bytes(projectName);
         dataValues[1] = bytes(registryLink);
-        dataValues[2] = bytes(units);
+        dataValues[2] = abi.encode(units);
 
         // Call function to set multiple key-value pairs
         setDataBatchForTokenIds(tokenIds, dataKeys, dataValues);

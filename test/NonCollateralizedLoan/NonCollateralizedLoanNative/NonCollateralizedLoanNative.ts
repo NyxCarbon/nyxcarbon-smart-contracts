@@ -21,6 +21,19 @@ describe("Non-Collateralized Loan Contract -- Native Token", function () {
     const transactionBPS: bigint = BigInt(80);
     const carbonCreditsGenerated: bigint = BigInt(25);
     const carbonCreditPrice: bigint = BigInt(40);
+    const cadtProjectName: string = "Ecotone Renewables 1";
+    const cadtRegistryLink: string = "https://data.climateactiondata.org/project?id=00067fdb-a354-4fe0-936d-587a7f43be9b&searchFlow=project";
+
+    const loanParams = {
+      initialLoanAmount: initialLoanAmount,
+      apy: apy,
+      amortizationPeriodInMonths: amortizationPeriodInMonths,
+      lockUpPeriodInMonths: lockUpPeriodInMonths,
+      transactionBps: transactionBPS,
+      lender: addr1,
+      borrower: addr2,
+      carbonCreditsGenerated: carbonCreditsGenerated
+    };
 
     const tokenId1 = "0x0000000000000000000000000000000000000000000000000000000000000001";
     const tokenId2 = "0x0000000000000000000000000000000000000000000000000000000000000002";
@@ -30,8 +43,16 @@ describe("Non-Collateralized Loan Contract -- Native Token", function () {
     const _NYX_BORROWER = "0x85749acc807d69123d0d5506d4f50090a074aeb2606b3c24031343bc2fe32ae9";
     const _NYX_LOAN_BALANCE = "0xa47b9177880a98391d6c9d9c68ce411d4e34d069439077790d5e35de0e929262";
     const _NYX_PAYMENT_INDEX = "0x2776cbcfd8490f894b0f24452a3c0cd4be0b007bd35e9a31d338400b8d8635ab";
+    const _NYX_CARBON_CREDITS_BALANCE = "0x0fbaf537829b456ea9ce20bff34b6432649b4d01046f31011b072b99544cb3ba";
+    const _NYX_CADT_PROJECT_NAME = "0x98199bc97b113a64023a60ced2e5d698bfde533b56b4c126643fad99700b1f15";
+    const _NYX_CADT_REGISTRY_LINK = "0x2ea835a0a77db3df9aa833b6e826b3f23a7f742036378de91f4fc345311e0945";
 
-    // Deploy NFT contract to use in loan contract
+    // Deploy Carbon Credit NFT contract to use in loan contract
+    const CCNFTCollection = await ethers.getContractFactory("CarbonCreditNFTCollection");
+    const hardhatCCNFTCollection = await CCNFTCollection.deploy("NyxCarbonCreditCollection", "NCCC", owner);
+    await hardhatCCNFTCollection.waitForDeployment();
+
+    // Deploy Loan NFT contract to use in loan contract
     const NFT = await ethers.getContractFactory("NonCollateralizedLoanNFT");
     const hardhatNFT = await NFT.deploy("NYXLoanNativeNFT", "NYXLN", owner);
     await hardhatNFT.waitForDeployment();
@@ -47,22 +68,18 @@ describe("Non-Collateralized Loan Contract -- Native Token", function () {
         LoanMath: hardhatLoanMathLib.target as string
       },
     });
-    const hardhatLoan = await Loan.deploy(hardhatNFT.target as string)
+    const hardhatLoan = await Loan.deploy(hardhatNFT.target as string, hardhatCCNFTCollection.target as string)
     await hardhatLoan.waitForDeployment();
 
-    // Transfer ownership of the NFT contract to the loan contract
+    // Transfer ownership of the NFT contracts to the loan contract
     await hardhatNFT.transferOwnership(hardhatLoan.target);
+    await hardhatCCNFTCollection.transferOwnership(hardhatLoan.target);
 
     // Call function to create loan    
     await hardhatLoan.createLoan(
-      initialLoanAmount,
-      apy,
-      amortizationPeriodInMonths,
-      lockUpPeriodInMonths,
-      transactionBPS,
-      addr1,
-      carbonCreditsGenerated,
-      carbonCreditPrice
+      loanParams,
+      cadtProjectName,
+      cadtRegistryLink
     );
 
     return { 
@@ -70,6 +87,8 @@ describe("Non-Collateralized Loan Contract -- Native Token", function () {
       hardhatLoan, 
       NFT,
       hardhatNFT,
+      CCNFTCollection,
+      hardhatCCNFTCollection,
       LoanMathLib,
       hardhatLoanMathLib,
       owner, 
@@ -89,7 +108,10 @@ describe("Non-Collateralized Loan Contract -- Native Token", function () {
       _NYX_INITIAL_LOAN_AMOUNT,
       _NYX_BORROWER,
       _NYX_LOAN_BALANCE,
-      _NYX_PAYMENT_INDEX
+      _NYX_PAYMENT_INDEX,
+      _NYX_CARBON_CREDITS_BALANCE,
+      _NYX_CADT_PROJECT_NAME,
+      _NYX_CADT_REGISTRY_LINK
     };  
   }
 
@@ -136,7 +158,7 @@ describe("Non-Collateralized Loan Contract -- Native Token", function () {
     it("Should transfer the initialLoanAmount to the contract", async function () {
       const { hardhatLoan, addr1, initialLoanAmount, tokenId1 } = await loadFixture(deployLoanFixture);
       await hardhatLoan.connect(addr1).fundLoan(tokenId1, { value: ethers.parseEther(initialLoanAmount.toString()) });
-      expect(await hardhatLoan.balance() / BigInt(1e18)).to.equal(initialLoanAmount);
+      expect(await hardhatLoan.balance(tokenId1) / BigInt(1e18)).to.equal(initialLoanAmount);
     });
 
     it("Should calculate the TLV and set currentBalance", async function () {
@@ -544,7 +566,7 @@ describe("Non-Collateralized Loan Contract -- Native Token", function () {
       await hardhatLoan.connect(addr1).liquidiateLoan(tokenId1);
       
       // Loan balance should be 0 after loan is liquidated
-      expect(await hardhatLoan.balance() / BigInt(1e18)).to.equal(0);
+      expect(await hardhatLoan.balance(tokenId1) / BigInt(1e18)).to.equal(0);
       
       // Remaining addr1 balance after loan liquidation must factor in gas fees
       // console.log('After liquidating loan: ', await ethers.provider.getBalance(addr1));

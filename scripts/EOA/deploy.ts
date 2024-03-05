@@ -19,29 +19,38 @@ async function main() {
   );
 
   console.log('⏳ Deploying the LoanNFT contract')
-  const NFTContractFactory = await ethers.getContractFactory("NonCollateralizedLoanNFT");
-  const NFT = await NFTContractFactory.deploy("NYXLoanNativeNFT", "NYXLN", deployer);
-  await NFT.waitForDeployment();
+  const LoanNFTContractFactory = await ethers.getContractFactory("NonCollateralizedLoanNFT");
+  const loanNFT = await LoanNFTContractFactory.deploy("NYXLoanNativeNFT", "NYXLN", deployer);
+  await loanNFT.waitForDeployment();
   console.log(
     '✅ Custom LoanNFT contract successfully deployed at address: ',
-    await NFT.getAddress(),
+    await loanNFT.getAddress(),
+  );
+
+  console.log('⏳ Deploying the CarbonCreditNFTCollection contract')
+  const CarbonCreditNFTContractFactory = await ethers.getContractFactory("CarbonCreditNFTCollection");
+  const carbonCreditNFT = await CarbonCreditNFTContractFactory.deploy("NyxCarbonCreditCollection", "NCCC", deployer);
+  await carbonCreditNFT.waitForDeployment();
+  console.log(
+    '✅ Custom CarbonCreditNFTCollection contract successfully deployed at address: ',
+    await carbonCreditNFT.getAddress(),
   );
 
   console.log('⏳ Deploying the Loan contract')
-  const LoanContractFactory = await ethers.getContractFactory("NonCollateralizedLoanNative", {
+  const LoanContractFactory = await ethers.getContractFactory("NonCollateralizedLoanNativeSimplified", {
     libraries: {
       LoanMath: (await loanMathLib.getAddress())
     },
   });
-  const Loan = await LoanContractFactory.deploy(await NFT.getAddress());
-  await Loan.waitForDeployment();
+  const loan = await LoanContractFactory.deploy(await loanNFT.getAddress(), await carbonCreditNFT.getAddress());
+  await loan.waitForDeployment();
   console.log(
     '✅ Custom Loan contract successfully deployed at address: ',
-    await Loan.getAddress(),
+    await loan.getAddress(),
   );
 
   console.log('⏳ Transferring ownership of LoanNFT to Loan contract')
-  const abiPath = "./artifacts/contracts/CarbonCreditNFTCollection/CarbonCreditNFTCollection.sol/CarbonCreditNFTCollection.json";
+  const abiPath = "./artifacts/contracts/NonCollateralizedLoan/NonCollateralizedLoanNFT/NonCollaterlizedLoanNFT.sol/NonCollateralizedLoanNFT.json";
   const abi = JSON.parse(fs.readFileSync(abiPath).toString()).abi;
 
   const provider = new ethers.JsonRpcProvider(
@@ -49,11 +58,22 @@ async function main() {
   );
 
   const EOA = new ethers.Wallet(PRIVATE_KEY as string, provider);
-  const LoanNFT = new ethers.Contract(await NFT.getAddress(), abi);
+  const LoanNFT = new ethers.Contract(await loanNFT.getAddress(), abi);
 
-  await LoanNFT.connect(EOA).transferOwnership(await Loan.getAddress());
+  await LoanNFT.connect(EOA).transferOwnership(await loan.getAddress());
   console.log(
     '✅ Ownership of LoanNFT successfully transferred to Loan contract'
+  );
+
+  console.log('⏳ Transferring ownership of CarbonCreditNFTCollection to Loan contract')
+  const ccAbiPath = "./artifacts/contracts/CarbonCreditNFTCollection/CarbonCreditNFTCollection.sol/CarbonCreditNFTCollection.json";
+  const ccAbi = JSON.parse(fs.readFileSync(ccAbiPath).toString()).abi;
+
+  const CarbonCreditNFT = new ethers.Contract(await carbonCreditNFT.getAddress(), abi);
+
+  await CarbonCreditNFT.connect(EOA).transferOwnership(await loan.getAddress());
+  console.log(
+    '✅ Ownership of CarbonCreditNFTCollection successfully transferred to Loan contract'
   );
 }
 
