@@ -43,7 +43,7 @@ describe("Carbon Credit NFT contract", function () {
 
     const projectName = "Project Green";
     const registryLink = "http://registry.example.com";
-    const units = "1000";
+    const units = 1000;
 
     await expect(hardhatNFTCollection.mintCarbonCreditNFT(addr1.address, projectName, registryLink, units))
       .to.emit(hardhatNFTCollection, "Minted")
@@ -79,7 +79,6 @@ describe("Carbon Credit NFT contract", function () {
 
       const tokenId = await hardhatNFTCollection.mintCarbonCreditNFT(addr1.address, projectName, registryLink, units);
       const nftMetadata = await hardhatNFTCollection.getCarbonCreditNFT('0x0000000000000000000000000000000000000000000000000000000000000001');
-      const meta1 = convertBytesToInt256(nftMetadata[2]);
 
       expect(convertBytesToString(nftMetadata[0])).to.equal(projectName);
       expect(convertBytesToString(nftMetadata[1])).to.equal(registryLink);

@@ -1,4 +1,5 @@
 import Web3 from "web3";
+import { ethers } from "hardhat";
 
 export function subtractMonths(numOfMonths = 18, date = new Date()) {
   date.setMonth(date.getMonth() - numOfMonths);
@@ -25,14 +26,7 @@ export function generateEpochTimestamps(startDate = new Date(), numberOfPayments
 }
 
 export function convertBytesToString(bytesValue) {
-  // Remove the '0x' prefix and convert to a byte array
-  let bytes = new Uint8Array(bytesValue.substring(2).match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-
-  // Decode the bytes to a string
-  let decoder = new TextDecoder('utf-8');
-  let stringValue = decoder.decode(bytes);
-  
-  return stringValue;
+  return ethers.toUtf8String(bytesValue);
 }
 
 export function convertUInt256ToBytes(uint256Value) {
@@ -74,4 +68,19 @@ export function createKeccak256Hash(dataKey) {
   const web3 = new Web3();
   const hash = web3.utils.soliditySha3(dataKey);
   return hash
+}
+
+export function intTo16ByteHex(value) {
+    // Initialize a 16-byte array with zeros
+    const byteArray = new Uint8Array(16);
+
+    // Set the last byte to the value, since it's assumed to be in the range 0-255 for this example
+    byteArray[15] = value;
+
+    // Convert each byte to a 2-character hexadecimal string and join them
+    const hexString = Array.from(byteArray)
+        .map(byte => byte.toString(16).padStart(2, '0'))
+        .join('');
+
+    return hexString;
 }
