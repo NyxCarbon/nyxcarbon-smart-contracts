@@ -5,7 +5,7 @@ library LoanMath {
     function calculateTotalLoanValue(
         uint256 amount,
         uint256 apy
-    ) internal view returns (uint256) {
+    ) public pure returns (uint256) {
         uint256 intermediateValue = (((10000 + (apy / 1e16)) ** 3) / 10000);
         return ((amount) * intermediateValue) / 1e8;
     }
@@ -14,7 +14,7 @@ library LoanMath {
         uint256 balance,
         uint256 transactionFee,
         uint256 months
-    ) public view returns (uint256, uint256) {
+    ) public pure returns (uint256, uint256) {
         uint256 monthlyPayment = (balance) / (months);
 
         uint256 fee = (monthlyPayment * transactionFee) / 10000;
@@ -27,7 +27,7 @@ library LoanMath {
         uint256 amount,
         int256 units,
         int256 price
-    ) internal view returns (int256) {
+    ) public pure returns (int256) {
         // calculate profit as remaining carbon credit balance * current price of carbon credits
         // divided by the initial loan amount
         return (units * price) - int(amount);
