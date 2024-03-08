@@ -12,8 +12,8 @@ bytes32 constant _NYX_LOAN_APY = 0x78d218f6ee1acec3eb94fd399955647e3d3cf4fff724a
 // keccak256('NYXAmoritizationPeriod')
 bytes32 constant _NYX_AMORITIZATION_PERIOD = 0x78b9eab38bd360a7d56421736185c4bffbaa8c2426818c5a452ceef95cd2ee12;
 
-// keccak256('NYXLockUpPeriod')
-bytes32 constant _NYX_LOCKUP_PERIOD = 0xd2c813959a88e7ffdd26dc5c53e35530524c82e9e859d05e4100edf872e6eae8;
+// keccak256('NYXGracePeriod')
+bytes32 constant _NYX_GRACE_PERIOD = 0xac7996d4cbeacb6bd02f9e388c898ab706b8bd8ecdc96998cede540c3dc53aa7;
 
 // keccak256('NYXTransactionBPS')
 bytes32 constant _NYX_TRANSACTION_BPS = 0x1ba0268702881be375d205d3625ad7323251c804279ea5e29c5c26d14662c059;
@@ -27,8 +27,8 @@ bytes32 constant _NYX_LENDER = 0x3d4ae42dee4156a448efc6820621c2bb68ddb71f0a85333
 // keccak256('NYXBorrower')
 bytes32 constant _NYX_BORROWER = 0x85749acc807d69123d0d5506d4f50090a074aeb2606b3c24031343bc2fe32ae9;
 
-// keccak256('NYXCarbonCreditsGenerated')
-bytes32 constant _NYX_CARBON_CREDITS_GENERATED = 0xaff400b8dd368967e7bb6a8ff09806b22b93b3e16cca7603c6ce06484282f484;
+// keccak256('NYXCarbonCreditsStaked')
+bytes32 constant _NYX_CARBON_CREDITS_STAKED = 0x6f0c431197f65bc3f6ca31fd4ecd9c9035056fae3779814fa98251922cfdd203;
 
 // keccak256('NYXCarbonCreditBalance')
 bytes32 constant _NYX_CARBON_CREDITS_BALANCE = 0x0fbaf537829b456ea9ce20bff34b6432649b4d01046f31011b072b99544cb3ba;
@@ -45,8 +45,11 @@ bytes32 constant _NYX_LOAN_STATUS = 0x4832cf0e94b7269e1cfb3481a8a7cb077570a24dba
 // keccak256('NYXPaymentIndex')
 bytes32 constant _NYX_PAYMENT_INDEX = 0x2776cbcfd8490f894b0f24452a3c0cd4be0b007bd35e9a31d338400b8d8635ab;
 
-// keccak256('NYXCADTProjectName')
-bytes32 constant _NYX_CADT_PROJECT_NAME = 0x98199bc97b113a64023a60ced2e5d698bfde533b56b4c126643fad99700b1f15;
+// keccak256('NYXCADTProjectNames[]')
+bytes32 constant _NYX_CADT_PROJECT_NAMES = 0xed35f3c3f45131d15e0da6b3e0141e5ecba2388971467cc7087eb1823f9ee2a4;
 
-// keccak256('NYXCADTRegistryLink')
-bytes32 constant _NYX_CADT_REGISTRY_LINK = 0x2ea835a0a77db3df9aa833b6e826b3f23a7f742036378de91f4fc345311e0945;
+// keccak256('NYXCADTRegistryLinks[]')
+bytes32 constant _NYX_CADT_REGISTRY_LINKS = 0x3c7a639215f33d27dd9a36381aa3017841a781da636f0335f55fb57b07039e13;
+
+// keccak256('NYXCADTUnits[]')
+bytes32 constant _NYX_CADT_UNITS = 0x9b0cc9b9391ffaf421cc8a6c55b89eca9f92924d9a3c6968631e027a95a92f6f;
