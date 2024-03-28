@@ -21,7 +21,7 @@ contract NonCollateralizedLoan is INonCollateralizedLoan, Ownable {
 
     NonCollateralizedLoanNFT public immutable loanNFTContract;
     CarbonCreditNFTCollection public immutable carbonCreditNFTContract;
-    LSP7Mintable public token;
+    LSP7Mintable public immutable token;
 
     int256 public carbonCreditPrice;
     mapping(uint256 => uint256[]) public paymentSchedules;

@@ -18,8 +18,8 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
 
-    NonCollateralizedLoanNFT public loanNFTContract;
-    CarbonCreditNFTCollection public carbonCreditNFTContract;
+    NonCollateralizedLoanNFT public immutable loanNFTContract;
+    CarbonCreditNFTCollection public immutable carbonCreditNFTContract;
 
     int256 public carbonCreditPrice;
     mapping(uint256 => uint256) public balance;
@@ -363,6 +363,9 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
             "0x"
         );
 
+        // Add LYX to contract storage
+        balance[tokenId] += msg.value;
+
         // Calculate total loan value and update _NYX_LOAN_BALANCE and _NYX_LOAN_STATUS
         loanNFTContract.setDataForTokenId(
             bytes32(tokenId),
@@ -375,9 +378,6 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
             _NYX_LOAN_STATUS,
             abi.encode(LoanState.Funded)
         );
-
-        // Add LYX to contract storage
-        balance[tokenId] += msg.value;
     }
 
     function acceptLoan(
@@ -394,6 +394,9 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
             tokenId,
             _NYX_BORROWER
         );
+
+        // Ensure the borrower is not the zero address
+        require(borrower != address(0), "Borrower address cannot be zero");
 
         uint256 amountToTransfer = balance[tokenId];
         balance[tokenId] = 0; // Set the balance to zero before the transfer to prevent reentrancy
@@ -671,6 +674,10 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
             true,
             "0x"
         );
+
+        // Ensure the lender is not the zero address
+        require(lender != address(0), "Lender address cannot be zero");
+
         payable(lender).transfer(netMonthlyPayment);
 
         // Transfer transactionFee to the owner
@@ -716,6 +723,9 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
             _NYX_LENDER
         );
 
+        uint256 amount = balance[tokenId];
+        balance[tokenId] = 0; // Set balance to 0 before the external call
+
         emit LoanLiquidated(
             msg.sender,
             lender,
@@ -730,9 +740,6 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
             _NYX_LOAN_STATUS,
             abi.encode(LoanState.Liquidated)
         );
-
-        uint256 amount = balance[tokenId];
-        balance[tokenId] = 0; // Set balance to 0 before the external call
 
         (bool success, ) = msg.sender.call{value: amount}("");
         require(success, "Failed to liquidate loan");
