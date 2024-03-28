@@ -19,7 +19,7 @@ contract CarbonCreditNFTCollection is LSP8Mintable {
         uint256 id,
         string projectName,
         string registryLink,
-        int256 units
+        uint256 units
     );
 
     constructor(
@@ -40,7 +40,7 @@ contract CarbonCreditNFTCollection is LSP8Mintable {
         address to,
         string memory projectName,
         string memory registryLink,
-        int256 units
+        uint256 units
     ) external returns (uint256) {
         _tokenIds.increment();
         uint256 newTokenId = _tokenIds.current();

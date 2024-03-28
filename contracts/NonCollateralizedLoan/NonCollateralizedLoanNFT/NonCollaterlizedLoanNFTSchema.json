@@ -21,8 +21,8 @@
         "valueContent": "String"
     },
     {
-        "name": "NYXLockUpPeriod",
-        "key": "0xd2c813959a88e7ffdd26dc5c53e35530524c82e9e859d05e4100edf872e6eae8",
+        "name": "NYXGracePeriod",
+        "key": "0xac7996d4cbeacb6bd02f9e388c898ab706b8bd8ecdc96998cede540c3dc53aa7",
         "keyType": "Singleton",
         "valueType": "string",
         "valueContent": "String"
@@ -56,8 +56,8 @@
         "valueContent": "String"
     },
     {
-        "name": "NYXCarbonCreditsGenerated",
-        "key": "0xaff400b8dd368967e7bb6a8ff09806b22b93b3e16cca7603c6ce06484282f484",
+        "name": "NYXCarbonCreditsStaked",
+        "key": "0x6f0c431197f65bc3f6ca31fd4ecd9c9035056fae3779814fa98251922cfdd203",
         "keyType": "Singleton",
         "valueType": "string",
         "valueContent": "String"
@@ -98,17 +98,24 @@
         "valueContent": "String"
     },
     {
-        "name": "NYXCADTProjectName",
-        "key": "0x98199bc97b113a64023a60ced2e5d698bfde533b56b4c126643fad99700b1f15",
-        "keyType": "Singleton",
+        "name": "NYXCADTProjectNames[]",
+        "key": "0xed35f3c3f45131d15e0da6b3e0141e5ecba2388971467cc7087eb1823f9ee2a4",
+        "keyType": "Array",
         "valueType": "string",
         "valueContent": "String"
     },
     {
-        "name": "NYXCADTRegistryLink",
-        "key": "0x2ea835a0a77db3df9aa833b6e826b3f23a7f742036378de91f4fc345311e0945",
-        "keyType": "Singleton",
+        "name": "NYXCADTRegistryLinks[]",
+        "key": "0x3c7a639215f33d27dd9a36381aa3017841a781da636f0335f55fb57b07039e13",
+        "keyType": "Array",
         "valueType": "string",
         "valueContent": "String"
+    },
+    {
+        "name": "NYXCADTUnits[]",
+        "key": "0x9b0cc9b9391ffaf421cc8a6c55b89eca9f92924d9a3c6968631e027a95a92f6f",
+        "keyType": "Array",
+        "valueType": "uint256",
+        "valueContent": "Number"
     }
 ]

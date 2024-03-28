@@ -17,22 +17,23 @@ describe("Non-Collateralized Loan Contract Simplified -- Native Token", function
     const initialLoanAmount: bigint = BigInt(1000);
     const apy: bigint = BigInt(14);
     const amortizationPeriodInMonths: bigint = BigInt(36);
-    const lockUpPeriodInMonths: bigint = BigInt(18);
+    const gracePeriodInMonths: bigint = BigInt(18);
     const transactionBPS: bigint = BigInt(80);
-    const carbonCreditsGenerated: bigint = BigInt(25);
+    const carbonCreditsStaked: bigint = BigInt(25);
     const carbonCreditPrice: bigint = BigInt(40);
     const cadtProjectName: string = "Ecotone Renewables 1";
     const cadtRegistryLink: string = "https://data.climateactiondata.org/project?id=00067fdb-a354-4fe0-936d-587a7f43be9b&searchFlow=project";
+    const cadtUnits: bigint = BigInt(1000);
 
     const loanParams = {
       initialLoanAmount: initialLoanAmount,
       apy: apy,
       amortizationPeriodInMonths: amortizationPeriodInMonths,
-      lockUpPeriodInMonths: lockUpPeriodInMonths,
+      gracePeriodInMonths: gracePeriodInMonths,
       transactionBps: transactionBPS,
       lender: addr1,
       borrower: addr2,
-      carbonCreditsGenerated: carbonCreditsGenerated
+      carbonCreditsStaked: carbonCreditsStaked
     };
 
     const tokenId1 = "0x0000000000000000000000000000000000000000000000000000000000000001";
@@ -44,8 +45,9 @@ describe("Non-Collateralized Loan Contract Simplified -- Native Token", function
     const _NYX_LOAN_BALANCE = "0xa47b9177880a98391d6c9d9c68ce411d4e34d069439077790d5e35de0e929262";
     const _NYX_PAYMENT_INDEX = "0x2776cbcfd8490f894b0f24452a3c0cd4be0b007bd35e9a31d338400b8d8635ab";
     const _NYX_CARBON_CREDITS_BALANCE = "0x0fbaf537829b456ea9ce20bff34b6432649b4d01046f31011b072b99544cb3ba";
-    const _NYX_CADT_PROJECT_NAME = "0x98199bc97b113a64023a60ced2e5d698bfde533b56b4c126643fad99700b1f15";
-    const _NYX_CADT_REGISTRY_LINK = "0x2ea835a0a77db3df9aa833b6e826b3f23a7f742036378de91f4fc345311e0945";
+    const _NYX_CADT_PROJECT_NAMES = "0xed35f3c3f45131d15e0da6b3e0141e5ecba2388971467cc7087eb1823f9ee2a4";
+    const _NYX_CADT_REGISTRY_LINKS = "0x3c7a639215f33d27dd9a36381aa3017841a781da636f0335f55fb57b07039e13";
+    const _NYX_CADT_UNITS = "0x9b0cc9b9391ffaf421cc8a6c55b89eca9f92924d9a3c6968631e027a95a92f6f";
 
     // Deploy Carbon Credit NFT contract to use in loan contract
     const CCNFTCollection = await ethers.getContractFactory("CarbonCreditNFTCollection");
@@ -77,9 +79,7 @@ describe("Non-Collateralized Loan Contract Simplified -- Native Token", function
 
     // Call function to create loan    
     await hardhatLoan.createLoan(
-      loanParams,
-      cadtProjectName,
-      cadtRegistryLink
+      loanParams
     );
 
     return { 
@@ -97,12 +97,13 @@ describe("Non-Collateralized Loan Contract Simplified -- Native Token", function
       initialLoanAmount, 
       apy, 
       amortizationPeriodInMonths,
-      lockUpPeriodInMonths, 
+      gracePeriodInMonths, 
       transactionBPS,
-      carbonCreditsGenerated,
+      carbonCreditsStaked,
       carbonCreditPrice,
       cadtProjectName,
       cadtRegistryLink,
+      cadtUnits,
       tokenId1,
       tokenId2,
       _NYX_LENDER,
@@ -112,8 +113,9 @@ describe("Non-Collateralized Loan Contract Simplified -- Native Token", function
       _NYX_LOAN_BALANCE,
       _NYX_PAYMENT_INDEX,
       _NYX_CARBON_CREDITS_BALANCE,
-      _NYX_CADT_PROJECT_NAME,
-      _NYX_CADT_REGISTRY_LINK
+      _NYX_CADT_PROJECT_NAMES,
+      _NYX_CADT_REGISTRY_LINKS,
+      _NYX_CADT_UNITS
     };  
   }
 
@@ -138,7 +140,64 @@ describe("Non-Collateralized Loan Contract Simplified -- Native Token", function
       const { hardhatLoan, owner } = await loadFixture(deployLoanFixture);
       expect(await hardhatLoan.owner()).to.equal(owner.address);
     });
+  });
 
+  // ADD CADT PROJECT tests
+  describe("Add CADT Project & emit event", function () {
+    it("Should add a CADT Project", async function () {
+      const { hardhatLoan, tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits } = await loadFixture(deployLoanFixture);
+      await expect(hardhatLoan.addCADTProject(tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits))
+        .to.emit(hardhatLoan, "ProjectAdded")
+        .withArgs(cadtProjectName, cadtRegistryLink, cadtUnits, 0);
+    });
+
+    it("Should get the CADT Project metadata", async function () {
+      const { hardhatLoan, tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.addCADTProject(tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits);
+      const projectMetadata0 = await hardhatLoan.getCADTProject(tokenId1, 0);
+      
+      expect(convertBytesToString(projectMetadata0[0])).to.equal(cadtProjectName);
+      expect(convertBytesToString(projectMetadata0[1])).to.equal(cadtRegistryLink);
+      expect(convertBytesToInt256(projectMetadata0[2])).to.equal(cadtUnits);
+
+      await hardhatLoan.addCADTProject(tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits);
+      const projectMetadata1 = await hardhatLoan.getCADTProject(tokenId1, 1);
+      
+      expect(convertBytesToString(projectMetadata1[0])).to.equal(cadtProjectName);
+      expect(convertBytesToString(projectMetadata1[1])).to.equal(cadtRegistryLink);
+      expect(convertBytesToInt256(projectMetadata1[2])).to.equal(cadtUnits);
+    });
+
+    it("Should update the units of carbon for a CADT Project", async function () {
+      const { hardhatLoan, tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits, _NYX_CADT_UNITS } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.addCADTProject(tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits);
+      
+      expect(await hardhatLoan.updateCADTProjectElement(tokenId1, 0, _NYX_CADT_UNITS, ethers.toBeArray(BigInt(250))))
+        .to.emit(hardhatLoan, "ProjectElementUpdated")
+        .withArgs(tokenId1, 0, _NYX_CADT_UNITS, ethers.toBeArray(BigInt(250)));
+
+      const projectMetadata = await hardhatLoan.getCADTProject(tokenId1, 0);
+      
+      expect(convertBytesToString(projectMetadata[0])).to.equal(cadtProjectName);
+      expect(convertBytesToString(projectMetadata[1])).to.equal(cadtRegistryLink);
+      expect(ethers.toBigInt(ethers.hexlify(projectMetadata[2]))).to.equal(BigInt(250));
+    });
+
+    it("Should update the project name for a CADT Project", async function () {
+      const { hardhatLoan, tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits, _NYX_CADT_PROJECT_NAMES } = await loadFixture(deployLoanFixture);
+      const newProjectName = "Remove Carbon 1";
+      await hardhatLoan.addCADTProject(tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits);
+      
+      expect(await hardhatLoan.updateCADTProjectElement(tokenId1, 0, _NYX_CADT_PROJECT_NAMES, ethers.toUtf8Bytes(newProjectName)))
+        .to.emit(hardhatLoan, "ProjectElementUpdated")
+        .withArgs(tokenId1, 0, _NYX_CADT_PROJECT_NAMES, ethers.toUtf8Bytes(newProjectName));
+
+      const projectMetadata = await hardhatLoan.getCADTProject(tokenId1, 0);
+      
+      expect(convertBytesToString(projectMetadata[0])).to.equal(newProjectName);
+      expect(convertBytesToString(projectMetadata[1])).to.equal(cadtRegistryLink);
+      expect(convertBytesToInt256(projectMetadata[2])).to.equal(cadtUnits);
+    });
   });
 
   // SET PAYMENT SCHEDULE tests
@@ -248,7 +307,8 @@ describe("Non-Collateralized Loan Contract Simplified -- Native Token", function
   // EXECUTE SWAP tests
   describe("Execute Swap", function () {
     it("Should execute the swap when the profit is greater than 32%", async function () {
-      const { hardhatLoan, hardhatNFT, hardhatCCNFTCollection, carbonCreditsGenerated, cadtProjectName, cadtRegistryLink, tokenId1, _NYX_LOAN_BALANCE, _NYX_LOAN_STATUS, _NYX_CARBON_CREDITS_BALANCE } = await loadFixture(deployLoanFixture);
+      const { hardhatLoan, hardhatNFT, hardhatCCNFTCollection, cadtProjectName, cadtRegistryLink, cadtUnits, tokenId1, _NYX_LOAN_BALANCE, _NYX_LOAN_STATUS, _NYX_CARBON_CREDITS_BALANCE } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.addCADTProject(tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits);
       await hardhatLoan.setCarbonCreditPrice(ethers.parseEther('52.86'));
       await hardhatLoan.evaluateSwapState(tokenId1);
       await hardhatLoan.executeSwap(tokenId1);
@@ -256,7 +316,29 @@ describe("Non-Collateralized Loan Contract Simplified -- Native Token", function
       const nftMetadata = await hardhatCCNFTCollection.getCarbonCreditNFT(tokenId1);
       expect(convertBytesToString(nftMetadata[0])).to.equal(cadtProjectName);
       expect(convertBytesToString(nftMetadata[1])).to.equal(cadtRegistryLink);
-      expect(convertBytesToInt256(nftMetadata[2])).to.equal(carbonCreditsGenerated);
+      expect(convertBytesToInt256(nftMetadata[2])).to.equal(cadtUnits);
+      
+      expect(await hardhatNFT.getDecodedUint256(tokenId1, _NYX_LOAN_BALANCE)).to.equal(0);
+      expect(await hardhatNFT.getDecodedUint256(tokenId1, _NYX_CARBON_CREDITS_BALANCE)).to.equal(0);
+      expect(await hardhatNFT.getDecodedUint256(tokenId1, _NYX_LOAN_STATUS)).to.equal(6);
+    });
+
+    it("Should create multiple carbon credit NFTs when auto-swapped", async function () {
+      const { hardhatLoan, hardhatNFT, hardhatCCNFTCollection, cadtProjectName, cadtRegistryLink, cadtUnits, tokenId1, tokenId2, _NYX_LOAN_BALANCE, _NYX_LOAN_STATUS, _NYX_CARBON_CREDITS_BALANCE } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.addCADTProject(tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits);
+      await hardhatLoan.addCADTProject(tokenId1, "Remove Carbon 1", cadtRegistryLink, 250);
+      await hardhatLoan.setCarbonCreditPrice(ethers.parseEther('65.00'));
+      await hardhatLoan.evaluateSwapState(tokenId1);
+
+      const nftMetadata0 = await hardhatCCNFTCollection.getCarbonCreditNFT(tokenId1);
+      expect(convertBytesToString(nftMetadata0[0])).to.equal(cadtProjectName);
+      expect(convertBytesToString(nftMetadata0[1])).to.equal(cadtRegistryLink);
+      expect(convertBytesToInt256(nftMetadata0[2])).to.equal(cadtUnits);
+      
+      const nftMetadata1 = await hardhatCCNFTCollection.getCarbonCreditNFT(tokenId2);
+      expect(convertBytesToString(nftMetadata1[0])).to.equal("Remove Carbon 1");
+      expect(convertBytesToString(nftMetadata1[1])).to.equal(cadtRegistryLink);
+      expect(convertBytesToInt256(nftMetadata1[2])).to.equal(250);
       
       expect(await hardhatNFT.getDecodedUint256(tokenId1, _NYX_LOAN_BALANCE)).to.equal(0);
       expect(await hardhatNFT.getDecodedUint256(tokenId1, _NYX_CARBON_CREDITS_BALANCE)).to.equal(0);
@@ -264,13 +346,14 @@ describe("Non-Collateralized Loan Contract Simplified -- Native Token", function
     });
     
     it("Should emit LoanSwapped event", async function () {
-      const { hardhatLoan, hardhatCCNFTCollection, addr1, carbonCreditsGenerated, cadtProjectName, cadtRegistryLink, tokenId1 } = await loadFixture(deployLoanFixture);
+      const { hardhatLoan, hardhatCCNFTCollection, addr1, cadtProjectName, cadtRegistryLink, cadtUnits, tokenId1 } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.addCADTProject(tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits);
       await hardhatLoan.setCarbonCreditPrice(ethers.parseEther('52.86'));
       await hardhatLoan.evaluateSwapState(tokenId1);
 
       await expect(hardhatLoan.executeSwap(tokenId1))
         .to.emit(hardhatCCNFTCollection, "Minted")
-        .withArgs(addr1.address, tokenId1, cadtProjectName, cadtRegistryLink, carbonCreditsGenerated)
+        .withArgs(addr1.address, tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits)
         .to.emit(hardhatLoan, "LoanSwapped")
         .withArgs(25, BigInt(3215) * BigInt(1e17), 3215)
     });
