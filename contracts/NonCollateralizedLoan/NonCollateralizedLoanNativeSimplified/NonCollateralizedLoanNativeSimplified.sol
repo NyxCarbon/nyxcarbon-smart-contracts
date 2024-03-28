@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.18;
 
 // modules
 import {INonCollateralizedLoanNativeSimplified} from "./INonCollateralizedLoanNativeSimplified.sol";
@@ -13,8 +13,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 // constants
 import {_NYX_INITIAL_LOAN_AMOUNT, _NYX_LOAN_APY, _NYX_AMORITIZATION_PERIOD, _NYX_GRACE_PERIOD, _NYX_TRANSACTION_BPS, _NYX_TOKEN_ADDRESS, _NYX_LENDER, _NYX_BORROWER, _NYX_CARBON_CREDITS_STAKED, _NYX_CARBON_CREDITS_BALANCE, _NYX_CARBON_CREDITS_PRICE, _NYX_LOAN_BALANCE, _NYX_LOAN_STATUS, _NYX_PAYMENT_INDEX, _NYX_CADT_PROJECT_NAMES, _NYX_CADT_REGISTRY_LINKS, _NYX_CADT_UNITS} from "../NonCollateralizedLoanNFT/constants.sol";
-
-import "hardhat/console.sol";
+uint256 constant TIME_TOLERANCE = 5 minutes;
 
 contract NonCollateralizedLoanNativeSimplified is
     INonCollateralizedLoanNativeSimplified,
@@ -23,8 +22,8 @@ contract NonCollateralizedLoanNativeSimplified is
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
 
-    NonCollateralizedLoanNFT public loanNFTContract;
-    CarbonCreditNFTCollection public carbonCreditNFTContract;
+    NonCollateralizedLoanNFT public immutable loanNFTContract;
+    CarbonCreditNFTCollection public immutable carbonCreditNFTContract;
 
     int256 public carbonCreditPrice;
     mapping(uint256 => uint256[]) public paymentSchedules;
@@ -89,8 +88,8 @@ contract NonCollateralizedLoanNativeSimplified is
     }
 
     // LOAN UTILITY FUNCTIONS
-    function setCarbonCreditPrice(int256 _carbonCreditPrice) public onlyOwner {
-        carbonCreditPrice = _carbonCreditPrice;
+    function setCarbonCreditPrice(int256 price) public onlyOwner {
+        carbonCreditPrice = price;
     }
 
     function getPaymentSchedule(
@@ -101,9 +100,9 @@ contract NonCollateralizedLoanNativeSimplified is
 
     function setPaymentSchedule(
         uint256 tokenId,
-        uint256[] memory _paymentSchedule
+        uint256[] memory schedule
     ) public onlyOwner {
-        paymentSchedules[tokenId] = _paymentSchedule;
+        paymentSchedules[tokenId] = schedule;
     }
 
     function callSetDataForTokenId(
@@ -137,12 +136,14 @@ contract NonCollateralizedLoanNativeSimplified is
             _NYX_LOAN_BALANCE
         );
 
-        return
-            LoanMath.calculateMonthlyPayment(
+        (uint256 monthlyPayment, uint256 monthlyFee) = LoanMath
+            .calculateMonthlyPayment(
                 loanCurrentBalance,
                 transactionBps,
                 amortizationPeriodInMonths - paymentIndex
             );
+
+        return (monthlyPayment, monthlyFee);
     }
 
     function createLSP2ArrayLengthKey(
@@ -160,9 +161,9 @@ contract NonCollateralizedLoanNativeSimplified is
 
     function addCADTProject(
         uint256 tokenId,
-        string memory _projectName,
-        string memory _registryLink,
-        uint256 _units
+        string memory projectName,
+        string memory registryLink,
+        uint256 units
     ) public onlyOwner {
         // NOTE: array lengths should be consistent across project names, registry links, and units arrays
         // Get the array length for the project names array
@@ -188,23 +189,25 @@ contract NonCollateralizedLoanNativeSimplified is
             arrayLength
         );
 
+        emit ProjectAdded(projectName, registryLink, units, arrayLength);
+
         // Save the new project to the appropriate keys
         loanNFTContract.setDataForTokenId(
             bytes32(tokenId),
             projectNameIndexKey,
-            bytes(_projectName)
+            bytes(projectName)
         );
 
         loanNFTContract.setDataForTokenId(
             bytes32(tokenId),
             registryLinkIndexKey,
-            bytes(_registryLink)
+            bytes(registryLink)
         );
 
         loanNFTContract.setDataForTokenId(
             bytes32(tokenId),
             unitsIndexKey,
-            abi.encode(_units)
+            abi.encode(units)
         );
 
         // Increment the array length for the new project
@@ -228,8 +231,6 @@ contract NonCollateralizedLoanNativeSimplified is
             _NYX_CADT_UNITS,
             abi.encode(arrayLength)
         );
-
-        emit ProjectAdded(_projectName, _registryLink, _units, arrayLength - 1);
     }
 
     function getCADTProject(
@@ -275,6 +276,8 @@ contract NonCollateralizedLoanNativeSimplified is
         bytes32 dataKey,
         bytes memory dataValue
     ) public onlyOwner {
+        emit ProjectElementUpdated(tokenId, arrayIndex, dataKey, dataValue);
+
         bytes32 dataIndexKey = createLSP2ArrayIndexKey(dataKey, arrayIndex);
 
         loanNFTContract.setDataForTokenId(
@@ -282,8 +285,6 @@ contract NonCollateralizedLoanNativeSimplified is
             dataIndexKey,
             dataValue
         );
-
-        emit ProjectElementUpdated(tokenId, arrayIndex, dataKey, dataValue);
     }
 
     // LOAN FUNCTIONS
@@ -292,6 +293,8 @@ contract NonCollateralizedLoanNativeSimplified is
     ) public onlyOwner returns (uint256) {
         _tokenIds.increment();
         uint256 newTokenId = _tokenIds.current();
+
+        emit LoanCreated(newTokenId);
 
         // Call mintNFT
         loanNFTContract.mintNFT(
@@ -323,7 +326,6 @@ contract NonCollateralizedLoanNativeSimplified is
             abi.encode(LoanState.Taken)
         );
 
-        emit LoanCreated(newTokenId);
         return newTokenId;
     }
 
@@ -362,22 +364,22 @@ contract NonCollateralizedLoanNativeSimplified is
             );
             executeSwap(tokenId);
         } else if (profitPercentage > 3200) {
+            emit LoanSwappable(carbonCreditBalance, profit, profitPercentage);
             loanNFTContract.setDataForTokenId(
                 bytes32(tokenId),
                 _NYX_LOAN_STATUS,
                 abi.encode(LoanState.Swappable)
             );
-            emit LoanSwappable(carbonCreditBalance, profit, profitPercentage);
         } else {
-            loanNFTContract.setDataForTokenId(
-                bytes32(tokenId),
-                _NYX_LOAN_STATUS,
-                abi.encode(LoanState.Taken)
-            );
             emit LoanNotSwappable(
                 carbonCreditBalance,
                 profit,
                 profitPercentage
+            );
+            loanNFTContract.setDataForTokenId(
+                bytes32(tokenId),
+                _NYX_LOAN_STATUS,
+                abi.encode(LoanState.Taken)
             );
         }
     }
@@ -405,15 +407,15 @@ contract NonCollateralizedLoanNativeSimplified is
 
         // Ensure the profit is still greater than 32% at time of execution
         if (profitPercentage <= 3200) {
+            emit LoanNoLongerSwappable(profitPercentage);
             loanNFTContract.setDataForTokenId(
                 bytes32(tokenId),
                 _NYX_LOAN_STATUS,
                 abi.encode(LoanState.Taken)
             );
-
-            emit LoanNoLongerSwappable(profitPercentage);
         } else {
-            // Get lender address
+            emit LoanSwapped(carbonCreditBalance, profit, profitPercentage);
+
             address lender = loanNFTContract.getDecodedAddress(
                 tokenId,
                 _NYX_LENDER
@@ -446,8 +448,6 @@ contract NonCollateralizedLoanNativeSimplified is
                 _NYX_LOAN_STATUS,
                 abi.encode(LoanState.Swapped)
             );
-
-            emit LoanSwapped(carbonCreditBalance, profit, profitPercentage);
         }
     }
 
@@ -497,7 +497,6 @@ contract NonCollateralizedLoanNativeSimplified is
         uint256 tokenId
     )
         public
-        payable
         virtual
         override
         onlyBorrower(tokenId)
@@ -563,12 +562,12 @@ contract NonCollateralizedLoanNativeSimplified is
             paymentIndex >= amortizationPeriodInMonths ||
             loanCurrentBalance <= 0
         ) {
+            emit LoanRepayed();
             loanNFTContract.setDataForTokenId(
                 bytes32(tokenId),
                 _NYX_LOAN_STATUS,
                 abi.encode(LoanState.Repayed)
             );
-            emit LoanRepayed();
         }
     }
 }

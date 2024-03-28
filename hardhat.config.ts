@@ -6,7 +6,10 @@ import "@openzeppelin/hardhat-upgrades";
 LoadEnv();
 
 const config: HardhatUserConfig = {
-  solidity: '0.8.12',
+  solidity: '0.8.18',
+  // paths: {
+  //   sources: "./contracts/NonCollateralizedLoan/NonCollateralizedLoanNativeSimplified",
+  // },
   networks: {
     luksoTestnet: {
       url: 'https://rpc.testnet.lukso.network',
