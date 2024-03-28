@@ -126,7 +126,7 @@ describe("Non-Collateralized Loan Contract Simplified -- Native Token", function
       expect(await hardhatNFT.getDecodedAddress(tokenId1, _NYX_LENDER)).to.equal(addr1.address);
     });
 
-    it("Should set the status of the loan as Created", async function () {
+    it("Should set the status of the loan as Taken", async function () {
       const { hardhatNFT, tokenId1, _NYX_LOAN_STATUS } = await loadFixture(deployLoanFixture);
       expect(await hardhatNFT.getDecodedUint256(tokenId1, _NYX_LOAN_STATUS)).to.equal(2);
     });
