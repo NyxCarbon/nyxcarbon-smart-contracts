@@ -387,6 +387,14 @@ describe("Non-Collateralized Loan Contract Simplified -- Native Token", function
 
   // MAKE PAYMENT tests
   describe("Make Payment", function () {
+    it("Should prevent borrower from making a payment because loan is not due yet", async function () {
+      const { hardhatLoan, addr2, tokenId1 } = await loadFixture(deployLoanFixture);
+
+      // Set payment schedule to begin on 05.05.2025 
+      await hardhatLoan.setPaymentSchedule(tokenId1, generateEpochTimestamps());
+      await expect(hardhatLoan.connect(addr2).makePayment(tokenId1)).to.be.revertedWithCustomError(hardhatLoan, "PaymentNotDue");
+    });
+
     it("Should not throw a zero balance error because the loan still has a balance", async function () {
       const { hardhatLoan, addr2, tokenId1 } = await loadFixture(deployLoanFixture);
       await hardhatLoan.setPaymentSchedule(tokenId1, generateEpochTimestamps());

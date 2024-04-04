@@ -652,6 +652,7 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
         onlyInState(tokenId, LoanState.Taken)
         nonReentrant(tokenId)
     {
+        uint256[] storage paymentSchedule = paymentSchedules[tokenId];
         PaymentData memory data = PaymentData({
             loanCurrentBalance: loanNFTContract.getDecodedUint256(
                 tokenId,
@@ -676,6 +677,10 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
             data.loanCurrentBalance <= 0
         ) {
             revert ZeroBalanceOnLoan();
+        }
+
+        if (block.timestamp <= paymentSchedule[data.paymentIndex]) {
+            revert PaymentNotDue(paymentSchedule[data.paymentIndex]);
         }
 
         (uint256 netMonthlyPayment, uint256 transactionFee) = LoanMath

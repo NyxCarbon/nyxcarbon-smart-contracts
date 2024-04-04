@@ -654,6 +654,7 @@ contract NonCollateralizedLoan is INonCollateralizedLoan, Ownable {
         onlyInState(tokenId, LoanState.Taken)
         nonReentrant(tokenId)
     {
+        uint256[] storage paymentSchedule = paymentSchedules[tokenId];
         uint256 amortizationPeriodInMonths = loanNFTContract.getDecodedUint256(
             tokenId,
             _NYX_AMORITIZATION_PERIOD
@@ -679,6 +680,10 @@ contract NonCollateralizedLoan is INonCollateralizedLoan, Ownable {
             loanCurrentBalance <= 0
         ) {
             revert ZeroBalanceOnLoan();
+        }
+
+        if (block.timestamp <= paymentSchedule[paymentIndex]) {
+            revert PaymentNotDue(paymentSchedule[paymentIndex]);
         }
 
         (uint256 netMonthlyPayment, uint256 transactionFee) = LoanMath
