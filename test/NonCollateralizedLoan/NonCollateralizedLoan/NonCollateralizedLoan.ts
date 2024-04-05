@@ -88,15 +88,15 @@ describe("Non-Collateralized Loan Contract -- LSP7/ECR20 Token", function () {
     );
     
     // Authorize operator to transfer 1M tokens for owner
-    await hardhatToken.revokeOperator(hardhatLoan.target, false, "0x");
+    await hardhatToken.revokeOperator(hardhatLoan.target, owner, false, "0x");
     await hardhatToken.authorizeOperator(hardhatLoan.target, BigInt(1000000) * BigInt(1e18), "0x");
 
     // Authorize operator to transfer tokens 1M for addr1
-    await hardhatToken.connect(addr1).revokeOperator(hardhatLoan.target, false, "0x");
+    await hardhatToken.connect(addr1).revokeOperator(hardhatLoan.target, addr1, false, "0x");
     await hardhatToken.connect(addr1).authorizeOperator(hardhatLoan.target, BigInt(1000000) * BigInt(1e18), "0x");
 
     // Authorize operator to transfer tokens 1M for addr2
-    await hardhatToken.connect(addr2).revokeOperator(hardhatLoan.target, false, "0x");
+    await hardhatToken.connect(addr2).revokeOperator(hardhatLoan.target, addr2, false, "0x");
     await hardhatToken.connect(addr2).authorizeOperator(hardhatLoan.target, BigInt(1000000) * BigInt(1e18), "0x");
 
     // Mint additional .5M tokens for addr1 for funding loan
