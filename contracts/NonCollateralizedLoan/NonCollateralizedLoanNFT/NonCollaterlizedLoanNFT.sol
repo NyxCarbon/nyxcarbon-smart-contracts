@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.18;
 
 // modules
 import {LSP8Mintable} from "@lukso/lsp-smart-contracts/contracts/LSP8IdentifiableDigitalAsset/presets/LSP8Mintable.sol";
@@ -27,18 +27,15 @@ contract NonCollateralizedLoanNFT is LSP8Mintable {
 
     function mintNFT(
         uint256 tokenId,
-        uint256 _initialLoanAmount,
-        uint256 _apy,
-        uint256 _amortizationPeriodInMonths,
-        uint256 _gracePeriodInMonths,
-        uint256 _transactionBps,
-        address payable _lender,
-        address payable _borrower,
-        uint256 _carbonCreditsStaked
-    ) external returns (uint256) {
-        // Mint NFT
-        mint(msg.sender, bytes32(tokenId), true, "0x");
-
+        uint256 initialLoanAmount,
+        uint256 apy,
+        uint256 amortizationPeriodInMonths,
+        uint256 gracePeriodInMonths,
+        uint256 transactionBps,
+        address payable lender,
+        address payable borrower,
+        uint256 carbonCreditsStaked
+    ) external {
         // Define arrays for storing data in LSP2 contract
         bytes32[] memory tokenIds = new bytes32[](15);
         bytes32[] memory dataKeys = new bytes32[](15);
@@ -77,16 +74,16 @@ contract NonCollateralizedLoanNFT is LSP8Mintable {
         dataKeys[13] = _NYX_CADT_REGISTRY_LINKS;
         dataKeys[14] = _NYX_CADT_UNITS;
 
-        dataValues[0] = abi.encode(_initialLoanAmount * 1e18);
-        dataValues[1] = abi.encode(_apy * 1e18);
-        dataValues[2] = abi.encode(_amortizationPeriodInMonths);
-        dataValues[3] = abi.encode(_gracePeriodInMonths);
-        dataValues[4] = abi.encode(_transactionBps);
-        dataValues[5] = abi.encode(_lender);
-        dataValues[6] = abi.encode(_borrower);
-        dataValues[7] = abi.encode(_carbonCreditsStaked);
-        dataValues[8] = abi.encode(_carbonCreditsStaked);
-        dataValues[9] = abi.encode(_initialLoanAmount * 1e18);
+        dataValues[0] = abi.encode(initialLoanAmount * 1e18);
+        dataValues[1] = abi.encode(apy * 1e18);
+        dataValues[2] = abi.encode(amortizationPeriodInMonths);
+        dataValues[3] = abi.encode(gracePeriodInMonths);
+        dataValues[4] = abi.encode(transactionBps);
+        dataValues[5] = abi.encode(lender);
+        dataValues[6] = abi.encode(borrower);
+        dataValues[7] = abi.encode(carbonCreditsStaked);
+        dataValues[8] = abi.encode(carbonCreditsStaked);
+        dataValues[9] = abi.encode(initialLoanAmount * 1e18);
         dataValues[10] = abi.encode(LoanState.Created);
         dataValues[11] = abi.encode(0);
         dataValues[12] = abi.encode(0);
@@ -95,6 +92,9 @@ contract NonCollateralizedLoanNFT is LSP8Mintable {
 
         // Call function to set multiple key-value pairs
         setDataBatchForTokenIds(tokenIds, dataKeys, dataValues);
+
+        // Mint NFT
+        mint(msg.sender, bytes32(tokenId), true, "0x");
     }
 
     function getDecodedInt256(

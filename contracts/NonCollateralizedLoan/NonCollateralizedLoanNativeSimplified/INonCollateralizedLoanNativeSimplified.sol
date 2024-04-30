@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.18;
 
 /**
  * @title Interface of the Non-Collateralized Loan Contract.
@@ -144,5 +144,5 @@ interface INonCollateralizedLoanNativeSimplified {
 
     function executeSwap(uint256 tokenId) external;
 
-    function makePayment(uint256 tokenId) external payable;
+    function makePayment(uint256 tokenId) external;
 }

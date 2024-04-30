@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.18;
 
 library LoanMath {
     function calculateTotalLoanValue(
         uint256 amount,
         uint256 apy
     ) public pure returns (uint256) {
-        uint256 intermediateValue = (((10000 + (apy / 1e16)) ** 3) / 10000);
-        return ((amount) * intermediateValue) / 1e8;
+        uint256 intermediateValue = (((10000 + (apy / 1e16)) ** 3));
+        return (amount * intermediateValue) / (10000 * 1e8);
     }
 
     function calculateMonthlyPayment(
@@ -15,9 +15,8 @@ library LoanMath {
         uint256 transactionFee,
         uint256 months
     ) public pure returns (uint256, uint256) {
-        uint256 monthlyPayment = (balance) / (months);
-
-        uint256 fee = (monthlyPayment * transactionFee) / 10000;
+        uint256 monthlyPayment = balance / months;
+        uint256 fee = (balance * transactionFee) / (months * 10000);
         uint256 netMonthlyPayment = monthlyPayment - fee;
 
         return (netMonthlyPayment, fee);

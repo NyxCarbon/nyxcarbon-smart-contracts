@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.18;
 
 // --- ERC725Y Data Keys
 
@@ -53,3 +53,6 @@ bytes32 constant _NYX_CADT_REGISTRY_LINKS = 0x3c7a639215f33d27dd9a36381aa3017841
 
 // keccak256('NYXCADTUnits[]')
 bytes32 constant _NYX_CADT_UNITS = 0x9b0cc9b9391ffaf421cc8a6c55b89eca9f92924d9a3c6968631e027a95a92f6f;
+
+// keccak256('NYXCarbonCreditTokenIds[]')
+bytes32 constant _NYX_CARBON_CREDIT_TOKEN_IDS = 0xb3a1e59171865a858664dbb34933a8e77054009f8a6878779ddd00366f48cd70;

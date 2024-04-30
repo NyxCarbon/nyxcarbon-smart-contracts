@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.18;
 
 // modules
 import {LSP8Mintable} from "@lukso/lsp-smart-contracts/contracts/LSP8IdentifiableDigitalAsset/presets/LSP8Mintable.sol";
@@ -45,8 +45,7 @@ contract CarbonCreditNFTCollection is LSP8Mintable {
         _tokenIds.increment();
         uint256 newTokenId = _tokenIds.current();
 
-        // Mint token
-        mint(to, bytes32(newTokenId), true, "0x");
+        emit Minted(to, newTokenId, projectName, registryLink, units);
 
         // Define arrays for storing data in ERC725Y contract
         bytes32[] memory tokenIds = new bytes32[](3);
@@ -69,7 +68,9 @@ contract CarbonCreditNFTCollection is LSP8Mintable {
         // Call function to set multiple key-value pairs
         setDataBatchForTokenIds(tokenIds, dataKeys, dataValues);
 
-        emit Minted(to, newTokenId, projectName, registryLink, units);
+        // Mint token
+        mint(to, bytes32(newTokenId), true, "0x");
+
         return newTokenId;
     }
 
