@@ -19,5 +19,12 @@
         "keyType": "Singleton",
         "valueType": "string",
         "valueContent": "String"
+    },
+    {
+        "name": "NYXCCGeographicIdentifier",
+        "key": "0x74f3b7d5110a1a0252831278d6100210950b4cc61ca603742bc17ab913c204dd",
+        "keyType": "Singleton",
+        "valueType": "string",
+        "valueContent": "String"
     }
 ]

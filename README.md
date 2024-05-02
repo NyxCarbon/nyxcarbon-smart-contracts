@@ -1,6 +1,6 @@
 # NyxCarbon Lending Protocol
 
-This repo contains the smart contracts deployed to the Lukso blockchain for creating a NYXd token, which is a 1-1 representation of USD, and a loan contract. The token is minted when a USDC token is sent to a NyxCarbon address and returned to the sender's address. The token can be used by a user to lend capital to a project developer to fund their sustainability project and receive a 14% APY or carbon credits. The second contract contains the actually loan contract.
+This repo contains the smart contracts deployed to the Lukso blockchain for creating a NYXd token (1-1 representation of USD),loan NFT contract (based on LSP7), carbon credit NFT contract (based on LSP8), and several loan contracts.
 
 ### Project Setup
 
@@ -17,9 +17,8 @@ This repo contains the smart contracts deployed to the Lukso blockchain for crea
    ```
 
 3. Add the `PRIVATE_KEY` stored in AWS Secrets Manager to the .env file
-4. Add your UP Address to the .env file
 
-### To test
+### To Test
 
 1. Run the below command to compile the smart contracts:
    ```
@@ -31,5 +30,13 @@ This repo contains the smart contracts deployed to the Lukso blockchain for crea
    ```
 3. Run the below command to execute the deployment scripts:
    ```
-   npx hardhat --network luksoTestnet run scripts/inspectLoan.ts
+   npx hardhat --network luksoTestnet run scripts/EOA/inspectLoanNFT.ts
+   ```
+
+### To Deploy
+
+1. Run the below command with the correct network:
+
+   ```
+   npx hardhat --network luksoTestnet run scripts/EOA/deploy.js
    ```

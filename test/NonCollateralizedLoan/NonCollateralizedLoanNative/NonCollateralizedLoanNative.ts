@@ -24,6 +24,8 @@ describe("Non-Collateralized Loan Contract -- Native Token", function () {
     const cadtProjectName: string = "Ecotone Renewables 1";
     const cadtRegistryLink: string = "https://data.climateactiondata.org/project?id=00067fdb-a354-4fe0-936d-587a7f43be9b&searchFlow=project";
     const cadtUnits: bigint = BigInt(1000);
+    const geographicIdentifier: string = "-14.235004, -51.92528";
+
 
     const loanParams = {
       initialLoanAmount: initialLoanAmount,
@@ -48,6 +50,7 @@ describe("Non-Collateralized Loan Contract -- Native Token", function () {
     const _NYX_CADT_PROJECT_NAMES = "0xed35f3c3f45131d15e0da6b3e0141e5ecba2388971467cc7087eb1823f9ee2a4";
     const _NYX_CADT_REGISTRY_LINKS = "0x3c7a639215f33d27dd9a36381aa3017841a781da636f0335f55fb57b07039e13";
     const _NYX_CADT_UNITS = "0x9b0cc9b9391ffaf421cc8a6c55b89eca9f92924d9a3c6968631e027a95a92f6f";
+    const _NYX_CADT_GEOGRAPHIC_IDENTIFIERS = "0x3769961b8926794e9ca8897823dc2f9e0270a9cf82eac2917aef8d76480a0ac8";
 
     // Deploy Carbon Credit NFT contract to use in loan contract
     const CCNFTCollection = await ethers.getContractFactory("CarbonCreditNFTCollection");
@@ -104,6 +107,7 @@ describe("Non-Collateralized Loan Contract -- Native Token", function () {
       cadtProjectName,
       cadtRegistryLink,
       cadtUnits,
+      geographicIdentifier,
       tokenId1,
       tokenId2,
       _NYX_LENDER,
@@ -115,7 +119,8 @@ describe("Non-Collateralized Loan Contract -- Native Token", function () {
       _NYX_CARBON_CREDITS_BALANCE,
       _NYX_CADT_PROJECT_NAMES,
       _NYX_CADT_REGISTRY_LINKS,
-      _NYX_CADT_UNITS
+      _NYX_CADT_UNITS,
+      _NYX_CADT_GEOGRAPHIC_IDENTIFIERS
     };
   }
 
@@ -185,22 +190,22 @@ describe("Non-Collateralized Loan Contract -- Native Token", function () {
   // ADD CADT PROJECT tests
   describe("Add CADT Project & emit event", function () {
     it("Should add a CADT Project", async function () {
-      const { hardhatLoan, tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits } = await loadFixture(deployLoanFixture);
-      await expect(hardhatLoan.addCADTProject(tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits))
+      const { hardhatLoan, tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits, geographicIdentifier } = await loadFixture(deployLoanFixture);
+      await expect(hardhatLoan.addCADTProject(tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits, geographicIdentifier))
         .to.emit(hardhatLoan, "ProjectAdded")
-        .withArgs(cadtProjectName, cadtRegistryLink, cadtUnits, 0);
+        .withArgs(cadtProjectName, cadtRegistryLink, cadtUnits, geographicIdentifier, 0);
     });
 
     it("Should get the CADT Project metadata", async function () {
-      const { hardhatLoan, tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits } = await loadFixture(deployLoanFixture);
-      await hardhatLoan.addCADTProject(tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits);
+      const { hardhatLoan, tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits, geographicIdentifier } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.addCADTProject(tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits, geographicIdentifier);
       const projectMetadata0 = await hardhatLoan.getCADTProject(tokenId1, 0);
       
       expect(convertBytesToString(projectMetadata0[0])).to.equal(cadtProjectName);
       expect(convertBytesToString(projectMetadata0[1])).to.equal(cadtRegistryLink);
       expect(convertBytesToInt256(projectMetadata0[2])).to.equal(cadtUnits);
 
-      await hardhatLoan.addCADTProject(tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits);
+      await hardhatLoan.addCADTProject(tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits, geographicIdentifier);
       const projectMetadata1 = await hardhatLoan.getCADTProject(tokenId1, 1);
       
       expect(convertBytesToString(projectMetadata1[0])).to.equal(cadtProjectName);
@@ -209,8 +214,8 @@ describe("Non-Collateralized Loan Contract -- Native Token", function () {
     });
 
     it("Should update the units of carbon for a CADT Project", async function () {
-      const { hardhatLoan, tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits, _NYX_CADT_UNITS } = await loadFixture(deployLoanFixture);
-      await hardhatLoan.addCADTProject(tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits);
+      const { hardhatLoan, tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits, geographicIdentifier, _NYX_CADT_UNITS } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.addCADTProject(tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits, geographicIdentifier);
       
       expect(await hardhatLoan.updateCADTProjectElement(tokenId1, 0, _NYX_CADT_UNITS, ethers.toBeArray(BigInt(250))))
         .to.emit(hardhatLoan, "ProjectElementUpdated")
@@ -224,9 +229,9 @@ describe("Non-Collateralized Loan Contract -- Native Token", function () {
     });
 
     it("Should update the project name for a CADT Project", async function () {
-      const { hardhatLoan, tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits, _NYX_CADT_PROJECT_NAMES } = await loadFixture(deployLoanFixture);
+      const { hardhatLoan, tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits, geographicIdentifier, _NYX_CADT_PROJECT_NAMES } = await loadFixture(deployLoanFixture);
       const newProjectName = "Remove Carbon 1";
-      await hardhatLoan.addCADTProject(tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits);
+      await hardhatLoan.addCADTProject(tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits, geographicIdentifier);
       
       expect(await hardhatLoan.updateCADTProjectElement(tokenId1, 0, _NYX_CADT_PROJECT_NAMES, ethers.toUtf8Bytes(newProjectName)))
         .to.emit(hardhatLoan, "ProjectElementUpdated")

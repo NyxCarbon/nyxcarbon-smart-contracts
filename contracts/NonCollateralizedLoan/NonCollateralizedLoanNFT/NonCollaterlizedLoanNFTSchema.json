@@ -117,5 +117,19 @@
         "keyType": "Array",
         "valueType": "uint256",
         "valueContent": "Number"
+    },
+    {
+        "name": "NYXCADTGeographicIdentifiers[]",
+        "key": "0x3769961b8926794e9ca8897823dc2f9e0270a9cf82eac2917aef8d76480a0ac8",
+        "keyType": "Array",
+        "valueType": "uint256",
+        "valueContent": "Number"
+    },
+    {
+        "name": "NYXCarbonCreditTokenIds[]",
+        "key": "0xb3a1e59171865a858664dbb34933a8e77054009f8a6878779ddd00366f48cd70",
+        "keyType": "Array",
+        "valueType": "uint256",
+        "valueContent": "Number"
     }
 ]

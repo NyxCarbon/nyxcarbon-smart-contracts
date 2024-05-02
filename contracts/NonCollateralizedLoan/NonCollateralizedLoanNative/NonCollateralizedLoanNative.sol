@@ -12,7 +12,7 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 // constants
-import {_NYX_INITIAL_LOAN_AMOUNT, _NYX_LOAN_APY, _NYX_AMORITIZATION_PERIOD, _NYX_GRACE_PERIOD, _NYX_TRANSACTION_BPS, _NYX_TOKEN_ADDRESS, _NYX_LENDER, _NYX_BORROWER, _NYX_CARBON_CREDITS_STAKED, _NYX_CARBON_CREDITS_BALANCE, _NYX_CARBON_CREDITS_PRICE, _NYX_LOAN_BALANCE, _NYX_LOAN_STATUS, _NYX_PAYMENT_INDEX, _NYX_CADT_PROJECT_NAMES, _NYX_CADT_REGISTRY_LINKS, _NYX_CADT_UNITS, _NYX_CARBON_CREDIT_TOKEN_IDS} from "../NonCollateralizedLoanNFT/constants.sol";
+import {_NYX_INITIAL_LOAN_AMOUNT, _NYX_LOAN_APY, _NYX_AMORITIZATION_PERIOD, _NYX_GRACE_PERIOD, _NYX_TRANSACTION_BPS, _NYX_TOKEN_ADDRESS, _NYX_LENDER, _NYX_BORROWER, _NYX_CARBON_CREDITS_STAKED, _NYX_CARBON_CREDITS_BALANCE, _NYX_CARBON_CREDITS_PRICE, _NYX_LOAN_BALANCE, _NYX_LOAN_STATUS, _NYX_PAYMENT_INDEX, _NYX_CADT_PROJECT_NAMES, _NYX_CADT_REGISTRY_LINKS, _NYX_CADT_UNITS, _NYX_CARBON_CREDIT_TOKEN_IDS, _NYX_CADT_GEOGRAPHIC_IDENTIFIERS} from "../NonCollateralizedLoanNFT/constants.sol";
 
 contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
     using Counters for Counters.Counter;
@@ -172,7 +172,8 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
         uint256 tokenId,
         string memory projectName,
         string memory registryLink,
-        uint256 units
+        uint256 units,
+        string memory geographicIdentifier
     ) public onlyOwner {
         // NOTE: array lengths should be consistent across project names, registry links, and units arrays
         // Get the array length for the project names array
@@ -198,7 +199,18 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
             arrayLength
         );
 
-        emit ProjectAdded(projectName, registryLink, units, arrayLength);
+        bytes32 geographicIdentifierIndexKey = createLSP2ArrayIndexKey(
+            _NYX_CADT_GEOGRAPHIC_IDENTIFIERS,
+            arrayLength
+        );
+
+        emit ProjectAdded(
+            projectName,
+            registryLink,
+            units,
+            geographicIdentifier,
+            arrayLength
+        );
 
         // Save the new project to the appropriate keys
         loanNFTContract.setDataForTokenId(
@@ -219,10 +231,16 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
             abi.encode(units)
         );
 
+        loanNFTContract.setDataForTokenId(
+            bytes32(tokenId),
+            geographicIdentifierIndexKey,
+            bytes(geographicIdentifier)
+        );
+
         // Increment the array length for the new project
         arrayLength += 1;
 
-        // Save the new array length for all 3 arrays
+        // Save the new array length for all arrays
         loanNFTContract.setDataForTokenId(
             bytes32(tokenId),
             _NYX_CADT_PROJECT_NAMES,
@@ -238,6 +256,12 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
         loanNFTContract.setDataForTokenId(
             bytes32(tokenId),
             _NYX_CADT_UNITS,
+            abi.encode(arrayLength)
+        );
+
+        loanNFTContract.setDataForTokenId(
+            bytes32(tokenId),
+            _NYX_CADT_GEOGRAPHIC_IDENTIFIERS,
             abi.encode(arrayLength)
         );
     }
@@ -261,16 +285,23 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
             arrayIndex
         );
 
-        bytes32[] memory tokenIds = new bytes32[](3);
-        bytes32[] memory dataKeys = new bytes32[](3);
+        bytes32 geographicIdentifierIndexKey = createLSP2ArrayIndexKey(
+            _NYX_CADT_GEOGRAPHIC_IDENTIFIERS,
+            arrayIndex
+        );
+
+        bytes32[] memory tokenIds = new bytes32[](4);
+        bytes32[] memory dataKeys = new bytes32[](4);
 
         tokenIds[0] = bytes32(tokenId);
         tokenIds[1] = bytes32(tokenId);
         tokenIds[2] = bytes32(tokenId);
+        tokenIds[3] = bytes32(tokenId);
 
         dataKeys[0] = projectNameIndexKey;
         dataKeys[1] = registryLinkIndexKey;
         dataKeys[2] = unitsIndexKey;
+        dataKeys[3] = geographicIdentifierIndexKey;
 
         bytes[] memory data = loanNFTContract.getDataBatchForTokenIds(
             tokenIds,
@@ -590,6 +621,11 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
 
             bytes32 unitsIndexKey = createLSP2ArrayIndexKey(_NYX_CADT_UNITS, i);
 
+            bytes32 geographicIdentifierIndexKey = createLSP2ArrayIndexKey(
+                _NYX_CADT_GEOGRAPHIC_IDENTIFIERS,
+                i
+            );
+
             bytes memory projectName = loanNFTContract.getDataForTokenId(
                 bytes32(tokenId),
                 projectNameIndexKey
@@ -603,13 +639,20 @@ contract NonCollateralizedLoanNative is INonCollateralizedLoanNative, Ownable {
                 unitsIndexKey
             );
 
+            bytes memory geographicIdentifier = loanNFTContract
+                .getDataForTokenId(
+                    bytes32(tokenId),
+                    geographicIdentifierIndexKey
+                );
+
             if (abi.decode(units, (uint256)) > 0) {
                 uint256 mintedTokenId = carbonCreditNFTContract
                     .mintCarbonCreditNFT(
                         lender,
                         string(projectName),
                         string(registryLink),
-                        abi.decode(units, (uint256))
+                        abi.decode(units, (uint256)),
+                        string(geographicIdentifier)
                     );
 
                 // Store the minted token ID in the loan NFT metadata
