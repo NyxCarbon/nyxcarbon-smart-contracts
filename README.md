@@ -1,6 +1,10 @@
 # NyxCarbon Lending Protocol
 
-This repo contains the smart contracts deployed to the Lukso blockchain for creating a NYXd token, which is a 1-1 representation of USD, and a loan contract. The token is minted when a USDC token is sent to a NyxCarbon address and returned to the sender's address. The token can be used by a user to lend capital to a project developer to fund their sustainability project and receive a 14% APY or carbon credits. The second contract contains the actually loan contract.
+NyxCarbon is on a mission to unlock over a trillion dollars in sustainable finance commitments to help the world adapt to climate change. 
+
+The platform streamlines sustainability linked lending and helps asset managers reduce exposure to climate risk.
+
+NyxCarbon uses AI and digital contracts to improve risk assessments, simplify loan servicing, and create sustainability-linked lending opportunities. 
 
 ### Project Setup
 
