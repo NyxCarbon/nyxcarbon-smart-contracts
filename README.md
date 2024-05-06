@@ -1,10 +1,18 @@
 # NyxCarbon Lending Protocol
 
-NyxCarbon is on a mission to unlock over a trillion dollars in sustainable finance commitments to help the world adapt to climate change. 
+NyxCarbon is on a mission to unlock over a trillion dollars in sustainable finance commitments to help the world adapt to climate change.
 
 The platform streamlines sustainability linked lending and helps asset managers reduce exposure to climate risk.
 
-NyxCarbon uses AI and digital contracts to improve risk assessments, simplify loan servicing, and create sustainability-linked lending opportunities. 
+NyxCarbon uses AI and digital contracts to improve risk assessments, simplify loan servicing, and create sustainability-linked lending opportunities.
+
+This repo contains the below smart contracts used by NyxCarbon to manage the loan transaction workflow. These contracts have been deployed to the Lukso Testnet and Peaq Mainnet.
+
+1. `RWAVerification`: Extension of LSP8 used to create a token for real world asset verification.
+2. `LoanTxData`: Extension of LSP8 used to create a token for tracking off-chain loan data (e.g., balance, APY, lender address)
+3. `LoanContract`: Smart contract used to record loan transaction steps for LSP7/ERC20 tokens (e.g., make payment, swap remaining balance for carbon credits)
+4. `LYXLoanContract`: Smart contract used to facilitate loan transaction steps for LYX tokens (e.g., fund loan, make payment, swap remaining balance for carbon credits)
+5. `LYXLoanContractSimple`: Smart contract used to record loan transaction steps for LYX tokens where actions take place through other contracts (e.g., make payment, swap remaining balance for carbon credits)
 
 ### Project Setup
 
@@ -20,10 +28,9 @@ NyxCarbon uses AI and digital contracts to improve risk assessments, simplify lo
    cp .env.template .env
    ```
 
-3. Add the `PRIVATE_KEY` stored in AWS Secrets Manager to the .env file
-4. Add your UP Address to the .env file
+3. Add the controller `PRIVATE_KEY` which will be used for deployment, `UP_ADDR` which will be the owner of the contracts, and the `RPC_URL`.
 
-### To test
+### To Test
 
 1. Run the below command to compile the smart contracts:
    ```
@@ -33,7 +40,11 @@ NyxCarbon uses AI and digital contracts to improve risk assessments, simplify lo
    ```
    npx hardhat test
    ```
-3. Run the below command to execute the deployment scripts:
+
+### To Deploy
+
+1. Run the below command to execute the deployment script for the Loan Math library to the Lukso Testnet:
+
    ```
-   npx hardhat --network luksoTestnet run scripts/inspectLoan.ts
+   npx hardhat --network luksoTestnet run scripts/asUP/deployLoanMath.ts
    ```

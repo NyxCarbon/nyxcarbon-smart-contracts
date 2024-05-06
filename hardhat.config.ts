@@ -7,11 +7,13 @@ LoadEnv();
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: '0.8.18', 
+    version: '0.8.18',
     settings: {
       optimizer: {
-        enabled: true
-      }
+        enabled: true,
+        runs: 1000,
+      },
+      viaIR: true
     }
   },
   networks: {
@@ -21,10 +23,13 @@ const config: HardhatUserConfig = {
       accounts: [process.env.PRIVATE_KEY as string],
       allowUnlimitedContractSize: true,
     },
+    peaq: {
+      url: 'https://erpc-mpfn1.peaq.network',
+      chainId: 3338,
+      accounts: [process.env.PRIVATE_KEY as string],
+      allowUnlimitedContractSize: true,
+    },
   },
-  // paths: {
-  //   sources: "./contracts/NonCollateralizedLoan/NonCollateralizedLoan/NonCollateralizedLoan.sol",
-  // },
 };
 
 export default config;
