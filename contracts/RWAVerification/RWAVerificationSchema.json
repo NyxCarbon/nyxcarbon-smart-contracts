@@ -1,0 +1,30 @@
+[
+    {
+        "name": "RWAVProjectName",
+        "key": "0xcf921980aa542d23e8a26cd260640519bf09326f6efa491b32feb878f90979c5",
+        "keyType": "Singleton",
+        "valueType": "string",
+        "valueContent": "String"
+    },
+    {
+        "name": "RWAVProjectLink",
+        "key": "0xc72a32ccecbb104f36819a6479986150be95d18feee96ce5749f0768736793a7",
+        "keyType": "Singleton",
+        "valueType": "string",
+        "valueContent": "String"
+    },
+    {
+        "name": "RWAVUnits",
+        "key": "0xefd975744d6769743b6d57fb3a364772aac10fbe07fd77923e892151442fffa7",
+        "keyType": "Singleton",
+        "valueType": "string",
+        "valueContent": "String"
+    },
+    {
+        "name": "RWAVGeographicIdentifier",
+        "key": "0x13555157cdcc0f35ecceba3f6b86bb07aff08cb2f74ee487f36b420996695e44",
+        "keyType": "Singleton",
+        "valueType": "string",
+        "valueContent": "String"
+    }
+]

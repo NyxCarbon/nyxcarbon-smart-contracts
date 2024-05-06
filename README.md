@@ -1,6 +1,12 @@
 # NyxCarbon Lending Protocol
 
-This repo contains the smart contracts deployed to the Lukso blockchain for creating a NYXd token (1-1 representation of USD),loan NFT contract (based on LSP7), carbon credit NFT contract (based on LSP8), and several loan contracts.
+This repo contains the below smart contracts used by NyxCarbon to manage the loan transaction workflow. These contracts have been deployed to the Lukso Testnet and Peaq Mainnet.
+
+1. `RWAVerification`: Extension of LSP8 used to create a token for real world asset verification.
+2. `LoanTxData`: Extension of LSP8 used to create a token for tracking off-chain loan data (e.g., balance, APY, lender address)
+3. `LoanContract`: Smart contract used to record loan transaction steps for LSP7/ERC20 tokens (e.g., make payment, swap remaining balance for carbon credits)
+4. `LYXLoanContract`: Smart contract used to facilitate loan transaction steps for LYX tokens (e.g., fund loan, make payment, swap remaining balance for carbon credits)
+5. `LYXLoanContractSimple`: Smart contract used to record loan transaction steps for LYX tokens where actions take place through other contracts (e.g., make payment, swap remaining balance for carbon credits)
 
 ### Project Setup
 
@@ -16,7 +22,7 @@ This repo contains the smart contracts deployed to the Lukso blockchain for crea
    cp .env.template .env
    ```
 
-3. Add the `PRIVATE_KEY` stored in AWS Secrets Manager to the .env file
+3. Add the controller `PRIVATE_KEY` which will be used for deployment, `UP_ADDR` which will be the owner of the contracts, and the `RPC_URL`.
 
 ### To Test
 
@@ -28,15 +34,11 @@ This repo contains the smart contracts deployed to the Lukso blockchain for crea
    ```
    npx hardhat test
    ```
-3. Run the below command to execute the deployment scripts:
-   ```
-   npx hardhat --network luksoTestnet run scripts/EOA/inspectLoanNFT.ts
-   ```
 
 ### To Deploy
 
-1. Run the below command with the correct network:
+1. Run the below command to execute the deployment script for the Loan Math library to the Lukso Testnet:
 
    ```
-   npx hardhat --network luksoTestnet run scripts/EOA/deploy.js
+   npx hardhat --network luksoTestnet run scripts/asUP/deployLoanMath.ts
    ```
