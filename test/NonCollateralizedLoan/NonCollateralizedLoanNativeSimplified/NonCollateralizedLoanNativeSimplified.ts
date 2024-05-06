@@ -53,7 +53,7 @@ describe("Non-Collateralized Loan Contract Simplified -- Native Token", function
 
     // Deploy Carbon Credit NFT contract to use in loan contract
     const CCNFTCollection = await ethers.getContractFactory("CarbonCreditNFTCollection");
-    const hardhatCCNFTCollection = await CCNFTCollection.deploy("NyxCarbonCreditCollection", "NCCC", owner);
+    const hardhatCCNFTCollection = await CCNFTCollection.deploy("NyxCarbonCreditCollection", "NCCC", owner, owner);
     await hardhatCCNFTCollection.waitForDeployment();
 
     // Deploy Loan NFT contract to use in loan contract
@@ -354,14 +354,14 @@ describe("Non-Collateralized Loan Contract Simplified -- Native Token", function
     });
     
     it("Should emit LoanSwapped event", async function () {
-      const { hardhatLoan, hardhatCCNFTCollection, addr1, cadtProjectName, cadtRegistryLink, cadtUnits, geographicIdentifier, tokenId1 } = await loadFixture(deployLoanFixture);
+      const { hardhatLoan, hardhatCCNFTCollection, owner, addr1, addr2, cadtProjectName, cadtRegistryLink, cadtUnits, geographicIdentifier, tokenId1 } = await loadFixture(deployLoanFixture);
       await hardhatLoan.addCADTProject(tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits, geographicIdentifier);
       await hardhatLoan.setCarbonCreditPrice(ethers.parseEther('52.86'));
       await hardhatLoan.evaluateSwapState(tokenId1);
 
       await expect(hardhatLoan.executeSwap(tokenId1))
         .to.emit(hardhatCCNFTCollection, "Minted")
-        .withArgs(addr1.address, tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits, geographicIdentifier)
+        .withArgs(addr1.address, tokenId1, cadtProjectName, cadtRegistryLink, cadtUnits, geographicIdentifier, [await hardhatLoan.getAddress()])
         .to.emit(hardhatLoan, "LoanSwapped")
         .withArgs(25, BigInt(3215) * BigInt(1e17), 3215)
     });
@@ -369,7 +369,7 @@ describe("Non-Collateralized Loan Contract Simplified -- Native Token", function
     it("Should only allow the owner to execute the swap", async function () {
       const { hardhatLoan, addr1, tokenId1 } = await loadFixture(deployLoanFixture);
       await hardhatLoan.setCarbonCreditPrice(ethers.parseEther('52.86'));
-      await hardhatLoan.evaluateSwapState(tokenId1);    
+      await hardhatLoan.evaluateSwapState(tokenId1);
 
       await expect(hardhatLoan.connect(addr1).executeSwap(tokenId1)).to.be.revertedWith('Ownable: caller is not the owner');
     });

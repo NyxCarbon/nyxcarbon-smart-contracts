@@ -4,15 +4,15 @@ import * as dotenv from 'dotenv';
 
 // load env vars
 dotenv.config();
-const { UP_ADDR, PRIVATE_KEY } = process.env;
+const { UP_ADDR, PRIVATE_KEY, RPC_URL } = process.env;
 
 async function main() {
   // setup provider
-  const provider = new ethers.JsonRpcProvider(
-    'https://rpc.testnet.lukso.network',
-  );
+  const provider = new ethers.JsonRpcProvider(RPC_URL);
+
   // setup signer (the browser extension controller)
   const signer = new ethers.Wallet(PRIVATE_KEY as string, provider);
+
   // load the associated UP
   const UP = await ethers.getContractAt('UniversalProfile', UP_ADDR as string);
   console.log('🔑 EOA: ', signer.address);
