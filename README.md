@@ -1,5 +1,11 @@
 # NyxCarbon Lending Protocol
 
+NyxCarbon is on a mission to unlock over a trillion dollars in sustainable finance commitments to help the world adapt to climate change.
+
+The platform streamlines sustainability linked lending and helps asset managers reduce exposure to climate risk.
+
+NyxCarbon uses AI and digital contracts to improve risk assessments, simplify loan servicing, and create sustainability-linked lending opportunities.
+
 This repo contains the below smart contracts used by NyxCarbon to manage the loan transaction workflow. These contracts have been deployed to the Lukso Testnet and Peaq Mainnet.
 
 1. `RWAVerification`: Extension of LSP8 used to create a token for real world asset verification.
