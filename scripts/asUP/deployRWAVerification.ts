@@ -15,10 +15,10 @@ async function main() {
     UP_ADDR as string,
   );
 
-  const bytecode = (await ethers.getContractFactory('CarbonCreditNFTCollection')).bytecode;
+  const bytecode = (await ethers.getContractFactory('RWAVerification')).bytecode;
 
-  const name = 'NyxCarbonCreditCollection';
-  const token = 'NCCC';
+  const name = 'RWAVerification';
+  const token = 'RWAV';
   const owner = UP_ADDR;
 
   const abiEncoder = new ethers.AbiCoder();
@@ -34,7 +34,7 @@ async function main() {
 
   const bytecodeWithConstructor = ethers.concat([bytecode, encodedConstructorParams])
 
-  const carbonCreditNFTAddress = await universalProfile.execute.staticCall(
+  const rwaVerificationAddress = await universalProfile.execute.staticCall(
     1,
     ethers.ZeroAddress,
     0,
@@ -50,7 +50,7 @@ async function main() {
 
   await tx.wait();
 
-  console.log('✅ CarbonCreditNFT contract deployed at: ', carbonCreditNFTAddress);
+  console.log('✅ rwaVerification contract deployed at: ', rwaVerificationAddress);
 }
 
 main()

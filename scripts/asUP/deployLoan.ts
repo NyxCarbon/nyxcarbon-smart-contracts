@@ -3,10 +3,10 @@ import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 
 import LSP0Artifact from '@lukso/lsp-smart-contracts/artifacts/LSP0ERC725Account.json';
-import { LUKSO_LOAN_NFT, LUKSO_CARBON_CREDIT_NFT } from '../asEOA/constants';
+import { LUKSO_LOAN_MATH, LUKSO_LOAN_TX_DATA, LUKSO_RWA_VERIFICATION } from '../asUP/constants';
 
 dotenv.config();
-const { RPC_URL, PRIVATE_KEY, UP_ADDR } = process.env;
+const { UP_ADDR } = process.env;
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -17,15 +17,20 @@ async function main() {
     UP_ADDR as string,
   );
 
+  // Deploying the Loan contract
   console.log('⏳ Deploying the Loan contract')
-  const bytecode = (await ethers.getContractFactory('NonCollateralizedLoanNativeSimplified')).bytecode;
+  const bytecode = (await ethers.getContractFactory('LYXLoanContractSimple', {
+    libraries: {
+      LoanMath: (LUKSO_LOAN_MATH)
+    },
+  })).bytecode;
 
   const abiEncoder = new ethers.AbiCoder();
   const encodedConstructorParams = abiEncoder.encode(
     ['address', 'address'],
     [
-      LUKSO_LOAN_NFT,
-      LUKSO_CARBON_CREDIT_NFT
+      LUKSO_LOAN_TX_DATA,
+      LUKSO_RWA_VERIFICATION
     ],
   );
 
@@ -48,39 +53,56 @@ async function main() {
   await tx.wait();
   
   console.log(
-    '✅ Custom Loan contract successfully deployed at address: ',
+    '✅ LYXLoanContractSimple successfully deployed at address: ',
     loanAddress,
   );
 
-  // Transferring ownership of LoanNFT and CarbonCreditNFTCollection to Loan contract
-    console.log('⏳ Transferring ownership of LoanNFT to Loan contract')
-  const abiPath = "./artifacts/contracts/NonCollateralizedLoan/NonCollateralizedLoanNFT/NonCollaterlizedLoanNFT.sol/NonCollateralizedLoanNFT.json";
+  // Transferring ownership of LoanTxData to Loan contract
+  console.log('⏳ Transferring ownership of LoanTxData to Loan contract')
+  const abiPath = "./artifacts/contracts/LoanContract/LoanTxData/LoanTxData.sol/LoanTxData.json";
   const abi = JSON.parse(fs.readFileSync(abiPath).toString()).abi;
 
-  const provider = new ethers.JsonRpcProvider(
-      RPC_URL,
-  );
+  const loanTxData = new ethers.Contract(LUKSO_LOAN_TX_DATA, abi);
 
-  const EOA = new ethers.Wallet(PRIVATE_KEY as string, provider);
-  const LoanNFT = new ethers.Contract(LUKSO_LOAN_NFT, abi);
+  // ABI encode the function call to `transferOwnership`
+  const data = loanTxData.interface.encodeFunctionData("transferOwnership", [loanAddress]);
 
-  await LoanNFT.connect(EOA).transferOwnership(loanAddress);
-  console.log(
-    '✅ Ownership of LoanNFT successfully transferred to Loan contract'
-  );
+  // Prepare to call `execute` on the Universal Profile
+  const operationType = 0; // Call operation
+  const to = LUKSO_LOAN_TX_DATA; // Address of the contract with the `transferOwnership` function
+  const value = 0; // No ETH to be sent
 
-  console.log('⏳ Transferring ownership of CarbonCreditNFTCollection to Loan contract')
-  const ccAbiPath = "./artifacts/contracts/CarbonCreditNFTCollection/CarbonCreditNFTCollection.sol/CarbonCreditNFTCollection.json";
-  const ccAbi = JSON.parse(fs.readFileSync(ccAbiPath).toString()).abi;
+  try {
+    const tx = await universalProfile.execute(operationType, to, value, data);
+    const receipt = await tx.wait();
+    console.log('Transaction successful:', receipt);
+    console.log(
+      '✅ Ownership of loanTxData successfully transferred to Loan contract'
+    );
+  } catch (error) {
+      console.error('Failed to execute transaction:', error);
+  }
 
-  const CarbonCreditNFT = new ethers.Contract(LUKSO_CARBON_CREDIT_NFT, ccAbi);
+  // Transferring ownership of RWAVerification to Loan contract
+  console.log('⏳ Transferring ownership of RWAVerification to Loan contract')
+  const rwavAbiPath = "./artifacts/contracts/RWAVerification/RWAVerification.sol/RWAVerification.json";
+  const rwavAbi = JSON.parse(fs.readFileSync(rwavAbiPath).toString()).abi;
 
-  await CarbonCreditNFT.connect(EOA).transferOwnership(loanAddress);
-  console.log(
-    '✅ Ownership of CarbonCreditNFTCollection successfully transferred to Loan contract'
-  );
+  const rwaVerification = new ethers.Contract(LUKSO_RWA_VERIFICATION, rwavAbi);
 
+  // ABI encode the function call to `transferOwnership`
+  const rawvTransferOwnershipEncodedFunc = rwaVerification.interface.encodeFunctionData("transferOwnership", [loanAddress]);
 
+  try {
+    const tx = await universalProfile.execute(0, LUKSO_RWA_VERIFICATION, 0, rawvTransferOwnershipEncodedFunc);
+    const receipt = await tx.wait();
+    console.log('Transaction successful:', receipt);
+    console.log(
+      '✅ Ownership of RWAVerification successfully transferred to Loan contract'
+    );
+  } catch (error) {
+      console.error('Failed to execute transaction:', error);
+  }
 }
 
 main()

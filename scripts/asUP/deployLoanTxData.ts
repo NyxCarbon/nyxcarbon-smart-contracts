@@ -15,8 +15,8 @@ async function main() {
     UP_ADDR as string,
   );
 
-  console.log('⏳ Deploying the LoanNFT contract')
-  const loanNFTBytecode = (await ethers.getContractFactory('NonCollateralizedLoanNFT')).bytecode;
+  console.log('⏳ Deploying the LoanTxData contract')
+  const loanTxDataBytecode = (await ethers.getContractFactory('LoanTxData')).bytecode;
 
   const name = 'NYXLoanNativeNFT';
   const token = 'NYXLN';
@@ -32,27 +32,27 @@ async function main() {
     ],
   );
 
-  const loanNFTBytecodeWithConstructor = ethers.concat([loanNFTBytecode, encodedConstructorParams]);
+  const loanTxDataBytecodeWithConstructor = ethers.concat([loanTxDataBytecode, encodedConstructorParams]);
 
-  const loanNFTAddress = await universalProfile.execute.staticCall(
+  const loanTxDataAddress = await universalProfile.execute.staticCall(
     1,
     ethers.ZeroAddress,
     0,
-    loanNFTBytecodeWithConstructor,
+    loanTxDataBytecodeWithConstructor,
   );
 
   const tx = await universalProfile.execute(
     1,
     ethers.ZeroAddress,
     0,
-    loanNFTBytecodeWithConstructor,
+    loanTxDataBytecodeWithConstructor,
   );
 
   await tx.wait();
 
   console.log(
-    '✅ LoanNFT contract successfully deployed at address: ',
-    loanNFTAddress,
+    '✅ loanTxData contract successfully deployed at address: ',
+    loanTxDataAddress,
   );
 }
 
