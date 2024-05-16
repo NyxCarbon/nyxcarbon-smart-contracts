@@ -33,8 +33,9 @@ describe("Real World Asset Verification NFT contract", function () {
       const projectLink = "http://project.example.com";
       const units = "1000";
       const geographicIdentifier = "-14.235004, -51.92528";
+      const verificationLink = "https://data.climateactiondata.org/project?id=f18ebb58-ba73-48f3-b792-4155563f34d5&searchFlow=project";
 
-      const tokenId = await hardhatNFTCollection.mintNFT(owner.address, projectName, projectLink, units, geographicIdentifier);
+      const tokenId = await hardhatNFTCollection.mintNFT(owner.address, projectName, projectLink, units, geographicIdentifier, verificationLink);
       expect(await hardhatNFTCollection.tokenOwnerOf('0x0000000000000000000000000000000000000000000000000000000000000001')).to.equal(owner.address);
     });
 
@@ -45,8 +46,9 @@ describe("Real World Asset Verification NFT contract", function () {
       const projectLink = "http://project.example.com";
       const units = "1000";
       const geographicIdentifier = "-14.235004, -51.92528";
+      const verificationLink = "https://data.climateactiondata.org/project?id=f18ebb58-ba73-48f3-b792-4155563f34d5&searchFlow=project";
 
-      await expect(hardhatNFTCollection.connect(addr1).mintNFT(owner.address, projectName, projectLink, units, geographicIdentifier)).to.be.revertedWithCustomError(hardhatNFTCollection, 'OwnableCallerNotTheOwner').withArgs(addr1.address);
+      await expect(hardhatNFTCollection.connect(addr1).mintNFT(owner.address, projectName, projectLink, units, geographicIdentifier, verificationLink)).to.be.revertedWithCustomError(hardhatNFTCollection, 'OwnableCallerNotTheOwner').withArgs(addr1.address);
     });
 
     it("Should emit an event on minting", async function () {
@@ -56,17 +58,18 @@ describe("Real World Asset Verification NFT contract", function () {
       const projectLink = "http://project.example.com";
       const units = 1000;
       const geographicIdentifier = "-14.235004, -51.92528";
+      const verificationLink = "https://data.climateactiondata.org/project?id=f18ebb58-ba73-48f3-b792-4155563f34d5&searchFlow=project";
 
-      await expect(hardhatNFTCollection.mintNFT(addr1.address, projectName, projectLink, units, geographicIdentifier))
+      await expect(hardhatNFTCollection.mintNFT(addr1.address, projectName, projectLink, units, geographicIdentifier, verificationLink))
         .to.emit(hardhatNFTCollection, "Minted")
-        .withArgs(addr1.address, '0x0000000000000000000000000000000000000000000000000000000000000001', projectName, projectLink, units, geographicIdentifier, [owner]);
+        .withArgs(addr1.address, '0x0000000000000000000000000000000000000000000000000000000000000001', projectName, projectLink, units, geographicIdentifier, verificationLink, [owner]);
     });
 
     it("Should allow minting to different addresses", async function () {
       const { hardhatNFTCollection, addr1, addr2 } = await loadFixture(deployNFTCollectionFixture);
 
-      await hardhatNFTCollection.mintNFT(addr1.address, "Project Green", "http://project.example.com", "1000", "-14.235004, -51.92528");
-      await hardhatNFTCollection.mintNFT(addr2.address, "Project Blue", "http://project.example.org", "500", "-14.235004, -51.92528");
+      await hardhatNFTCollection.mintNFT(addr1.address, "Project Green", "http://project.example.com", "1000", "-14.235004, -51.92528", "https://data.climateactiondata.org/project?id=f18ebb58-ba73-48f3-b792-4155563f34d5&searchFlow=project");
+      await hardhatNFTCollection.mintNFT(addr2.address, "Project Blue", "http://project.example.org", "500", "-14.235004, -51.92528", "https://data.climateactiondata.org/project?id=f18ebb58-ba73-48f3-b792-4155563f34d5&searchFlow=project");
 
       expect(await hardhatNFTCollection.tokenOwnerOf('0x0000000000000000000000000000000000000000000000000000000000000001')).to.equal(addr1.address);
       expect(await hardhatNFTCollection.tokenOwnerOf('0x0000000000000000000000000000000000000000000000000000000000000002')).to.equal(addr2.address);
@@ -76,7 +79,7 @@ describe("Real World Asset Verification NFT contract", function () {
       const { hardhatNFTCollection, addr1 } = await loadFixture(deployNFTCollectionFixture);
 
       // Should revert with OwnableCallerNotTheOwner since only the owner should be able to mint new NFTs
-      await expect(hardhatNFTCollection.connect(addr1).mintNFT(addr1.address, "Project Green", "http://project.example.com", "1000", "-14.235004, -51.92528"))
+      await expect(hardhatNFTCollection.connect(addr1).mintNFT(addr1.address, "Project Green", "http://project.example.com", "1000", "-14.235004, -51.92528", "https://data.climateactiondata.org/project?id=f18ebb58-ba73-48f3-b792-4155563f34d5&searchFlow=project"))
         .to.be.revertedWithCustomError(hardhatNFTCollection, 'OwnableCallerNotTheOwner').withArgs(addr1.address);
     });
 });
@@ -89,8 +92,9 @@ describe("Real World Asset Verification NFT contract", function () {
       const projectLink = "http://project.example.com";
       const units = 1000;
       const geographicIdentifier = "-14.235004, -51.92528";
+      const verificationLink = "https://data.climateactiondata.org/project?id=f18ebb58-ba73-48f3-b792-4155563f34d5&searchFlow=project";
 
-      const tokenId = await hardhatNFTCollection.mintNFT(addr1.address, projectName, projectLink, units, geographicIdentifier);
+      const tokenId = await hardhatNFTCollection.mintNFT(addr1.address, projectName, projectLink, units, geographicIdentifier, verificationLink);
       const nftMetadata = await hardhatNFTCollection.getNFT('0x0000000000000000000000000000000000000000000000000000000000000001');
 
       expect(convertBytesToString(nftMetadata[0])).to.equal(projectName);
@@ -105,8 +109,9 @@ describe("Real World Asset Verification NFT contract", function () {
       const projectLink = "http://project.example.com";
       const units = 1000;
       const geographicIdentifier = "-14.235004, -51.92528";
+      const verificationLink = "https://data.climateactiondata.org/project?id=f18ebb58-ba73-48f3-b792-4155563f34d5&searchFlow=project";
 
-      await hardhatNFTCollection.mintNFT(addr1.address, projectName, projectLink, units, geographicIdentifier);
+      await hardhatNFTCollection.mintNFT(addr1.address, projectName, projectLink, units, geographicIdentifier, verificationLink);
       const nftMetadata = await hardhatNFTCollection.connect(addr2).getNFT('0x0000000000000000000000000000000000000000000000000000000000000001');
       
       expect(convertBytesToString(nftMetadata[0])).to.equal(projectName);

@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import {_LSP8_TOKENID_FORMAT_NUMBER} from "@lukso/lsp-smart-contracts/contracts/LSP8IdentifiableDigitalAsset/LSP8Constants.sol";
 import {_LSP4_TOKEN_TYPE_COLLECTION, _LSP4_CREATORS_ARRAY_KEY} from "@lukso/lsp-smart-contracts/contracts/LSP4DigitalAssetMetadata/LSP4Constants.sol";
 import {_LSP12_ISSUED_ASSETS_ARRAY_KEY} from "@lukso/lsp-smart-contracts/contracts/LSP12IssuedAssets/LSP12Constants.sol";
-import {_RWAV_PROJECT_NAME_DATA_KEY, _RWAV_REGISTRY_LINK_DATA_KEY, _RWAV_UNITS_DATA_KEY, _RWAV_GEOGRAPHIC_IDENTIFIER_DATA_KEY} from "./constants.sol";
+import {_RWAV_PROJECT_NAME_DATA_KEY, _RWAV_PROJECT_LINK_DATA_KEY, _RWAV_UNITS_DATA_KEY, _RWAV_GEOGRAPHIC_IDENTIFIER_DATA_KEY, _RWAV_LINK_DATA_KEY} from "./constants.sol";
 
 import "hardhat/console.sol";
 
@@ -22,9 +22,10 @@ contract RWAVerification is LSP8Mintable {
         address to,
         uint256 id,
         string projectName,
-        string registryLink,
+        string projectLink,
         uint256 units,
         string geographicIdentifier,
+        string verificationLink,
         address[] creators
     );
 
@@ -45,9 +46,10 @@ contract RWAVerification is LSP8Mintable {
     function mintNFT(
         address to,
         string memory projectName,
-        string memory registryLink,
+        string memory projectLink,
         uint256 units,
-        string memory geographicIdentifier
+        string memory geographicIdentifier,
+        string memory verificationLink
     ) external returns (uint256) {
         _tokenIds.increment();
         uint256 newTokenId = _tokenIds.current();
@@ -59,16 +61,17 @@ contract RWAVerification is LSP8Mintable {
             to,
             newTokenId,
             projectName,
-            registryLink,
+            projectLink,
             units,
             geographicIdentifier,
+            verificationLink,
             creators
         );
 
         // Define arrays for storing data in ERC725Y contract
-        bytes32[] memory tokenIds = new bytes32[](5);
-        bytes32[] memory dataKeys = new bytes32[](5);
-        bytes[] memory dataValues = new bytes[](5);
+        bytes32[] memory tokenIds = new bytes32[](6);
+        bytes32[] memory dataKeys = new bytes32[](6);
+        bytes[] memory dataValues = new bytes[](6);
 
         // Assign values to the arrays
         tokenIds[0] = bytes32(newTokenId);
@@ -76,18 +79,21 @@ contract RWAVerification is LSP8Mintable {
         tokenIds[2] = bytes32(newTokenId);
         tokenIds[3] = bytes32(newTokenId);
         tokenIds[4] = bytes32(newTokenId);
+        tokenIds[5] = bytes32(newTokenId);
 
         dataKeys[0] = _RWAV_PROJECT_NAME_DATA_KEY;
-        dataKeys[1] = _RWAV_REGISTRY_LINK_DATA_KEY;
+        dataKeys[1] = _RWAV_PROJECT_LINK_DATA_KEY;
         dataKeys[2] = _RWAV_UNITS_DATA_KEY;
         dataKeys[3] = _RWAV_GEOGRAPHIC_IDENTIFIER_DATA_KEY;
-        dataKeys[4] = _LSP4_CREATORS_ARRAY_KEY;
+        dataKeys[4] = _RWAV_LINK_DATA_KEY;
+        dataKeys[5] = _LSP4_CREATORS_ARRAY_KEY;
 
         dataValues[0] = bytes(projectName);
-        dataValues[1] = bytes(registryLink);
+        dataValues[1] = bytes(projectLink);
         dataValues[2] = abi.encode(units);
         dataValues[3] = bytes(geographicIdentifier);
-        dataValues[4] = abi.encode(creators);
+        dataValues[4] = bytes(verificationLink);
+        dataValues[5] = abi.encode(creators);
 
         // Call function to set multiple key-value pairs
         setDataBatchForTokenIds(tokenIds, dataKeys, dataValues);
@@ -101,18 +107,20 @@ contract RWAVerification is LSP8Mintable {
     function getNFT(
         uint256 tokenId
     ) external view returns (bytes[] memory dataValues) {
-        bytes32[] memory tokenIds = new bytes32[](4);
-        bytes32[] memory dataKeys = new bytes32[](4);
+        bytes32[] memory tokenIds = new bytes32[](5);
+        bytes32[] memory dataKeys = new bytes32[](5);
 
         tokenIds[0] = bytes32(tokenId);
         tokenIds[1] = bytes32(tokenId);
         tokenIds[2] = bytes32(tokenId);
         tokenIds[3] = bytes32(tokenId);
+        tokenIds[4] = bytes32(tokenId);
 
         dataKeys[0] = _RWAV_PROJECT_NAME_DATA_KEY;
-        dataKeys[1] = _RWAV_REGISTRY_LINK_DATA_KEY;
+        dataKeys[1] = _RWAV_PROJECT_LINK_DATA_KEY;
         dataKeys[2] = _RWAV_UNITS_DATA_KEY;
         dataKeys[3] = _RWAV_GEOGRAPHIC_IDENTIFIER_DATA_KEY;
+        dataKeys[4] = _RWAV_LINK_DATA_KEY;
 
         bytes[] memory data = getDataBatchForTokenIds(tokenIds, dataKeys);
         return (data);

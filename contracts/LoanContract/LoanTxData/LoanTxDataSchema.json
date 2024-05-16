@@ -126,6 +126,13 @@
         "valueContent": "Number"
     },
     {
+        "name": "NYXVerifiedProjectVerificationLinks[]",
+        "key": "0x6c1718525d902c3fbc20ecfb1209acee0fb762f9b0c0b2f6d1814c4627909110",
+        "keyType": "Array",
+        "valueType": "uint256",
+        "valueContent": "Number"
+    },
+    {
         "name": "NYXRWAVTokenIds[]",
         "key": "0xba1f03024321f3ad3b300da5bb81752d0d48af59fad2cffe7998d67440912c7c",
         "keyType": "Array",

@@ -25,6 +25,7 @@ describe("Loan Contract -- Native Token", function () {
     const verifiedProjectLink: string = "https://data.climateactiondata.org/project?id=00067fdb-a354-4fe0-936d-587a7f43be9b&searchFlow=project";
     const verifiedProjectUnits: bigint = BigInt(1000);
     const verifiedProjectGeographicIdentifier: string = "-14.235004, -51.92528";
+    const verifiedProjectVerificationLink: string = "https://data.climateactiondata.org/project?id=f18ebb58-ba73-48f3-b792-4155563f34d5&searchFlow=project"
 
 
     const loanParams = {
@@ -51,6 +52,7 @@ describe("Loan Contract -- Native Token", function () {
     const _NYX_VERIFIED_PROJECT_LINKS = "0x7836eb2501883488d409285c1540ef51e4c8bfa9a862734eb54ff84ce4cc46d7";
     const _NYX_VERIFIED_PROJECT_UNITS = "0xecce39cdb4f559d5ed120e7490f76f8b55f040094665424b10de24c65aeead6e";
     const _NYX_VERIFIED_PROJECT_GEOGRAPHIC_IDENTIFIERS = "0x438b3966c6fb3629949c4fd713334177cc151dfe49ac8ba2299b272e333c02eb";
+    const _NYX_VERIFIED_PROJECT_VERIFICATION_LINKS = "0x6c1718525d902c3fbc20ecfb1209acee0fb762f9b0c0b2f6d1814c4627909110";
 
     // Deploy RWAV NFT contract to use in loan contract
     const RWAVerification = await ethers.getContractFactory("RWAVerification");
@@ -108,6 +110,7 @@ describe("Loan Contract -- Native Token", function () {
       verifiedProjectLink,
       verifiedProjectUnits,
       verifiedProjectGeographicIdentifier,
+      verifiedProjectVerificationLink,
       tokenId1,
       tokenId2,
       _NYX_LENDER,
@@ -120,7 +123,8 @@ describe("Loan Contract -- Native Token", function () {
       _NYX_VERIFIED_PROJECT_NAMES,
       _NYX_VERIFIED_PROJECT_LINKS,
       _NYX_VERIFIED_PROJECT_UNITS,
-      _NYX_VERIFIED_PROJECT_GEOGRAPHIC_IDENTIFIERS
+      _NYX_VERIFIED_PROJECT_GEOGRAPHIC_IDENTIFIERS,
+      _NYX_VERIFIED_PROJECT_VERIFICATION_LINKS
     };
   }
 
@@ -190,22 +194,22 @@ describe("Loan Contract -- Native Token", function () {
   // ADD Verified PROJECT tests
   describe("Add Verified Project & emit event", function () {
     it("Should add a Verified Project", async function () {
-      const { hardhatLoan, tokenId1, verifiedProjectName, verifiedProjectLink, verifiedProjectUnits, verifiedProjectGeographicIdentifier } = await loadFixture(deployLoanFixture);
-      await expect(hardhatLoan.addVerifiedProject(tokenId1, verifiedProjectName, verifiedProjectLink, verifiedProjectUnits, verifiedProjectGeographicIdentifier))
+      const { hardhatLoan, tokenId1, verifiedProjectName, verifiedProjectLink, verifiedProjectUnits, verifiedProjectGeographicIdentifier, verifiedProjectVerificationLink } = await loadFixture(deployLoanFixture);
+      await expect(hardhatLoan.addVerifiedProject(tokenId1, verifiedProjectName, verifiedProjectLink, verifiedProjectUnits, verifiedProjectGeographicIdentifier, verifiedProjectVerificationLink))
         .to.emit(hardhatLoan, "ProjectAdded")
-        .withArgs(verifiedProjectName, verifiedProjectLink, verifiedProjectUnits, verifiedProjectGeographicIdentifier, 0);
+        .withArgs(verifiedProjectName, verifiedProjectLink, verifiedProjectUnits, verifiedProjectGeographicIdentifier, verifiedProjectVerificationLink, 0);
     });
 
     it("Should get the Verified Project metadata", async function () {
-      const { hardhatLoan, tokenId1, verifiedProjectName, verifiedProjectLink, verifiedProjectUnits, verifiedProjectGeographicIdentifier } = await loadFixture(deployLoanFixture);
-      await hardhatLoan.addVerifiedProject(tokenId1, verifiedProjectName, verifiedProjectLink, verifiedProjectUnits, verifiedProjectGeographicIdentifier);
+      const { hardhatLoan, tokenId1, verifiedProjectName, verifiedProjectLink, verifiedProjectUnits, verifiedProjectGeographicIdentifier, verifiedProjectVerificationLink } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.addVerifiedProject(tokenId1, verifiedProjectName, verifiedProjectLink, verifiedProjectUnits, verifiedProjectGeographicIdentifier, verifiedProjectVerificationLink);
       const projectMetadata0 = await hardhatLoan.getVerifiedProject(tokenId1, 0);
       
       expect(convertBytesToString(projectMetadata0[0])).to.equal(verifiedProjectName);
       expect(convertBytesToString(projectMetadata0[1])).to.equal(verifiedProjectLink);
       expect(convertBytesToInt256(projectMetadata0[2])).to.equal(verifiedProjectUnits);
 
-      await hardhatLoan.addVerifiedProject(tokenId1, verifiedProjectName, verifiedProjectLink, verifiedProjectUnits, verifiedProjectGeographicIdentifier);
+      await hardhatLoan.addVerifiedProject(tokenId1, verifiedProjectName, verifiedProjectLink, verifiedProjectUnits, verifiedProjectGeographicIdentifier, verifiedProjectVerificationLink);
       const projectMetadata1 = await hardhatLoan.getVerifiedProject(tokenId1, 1);
       
       expect(convertBytesToString(projectMetadata1[0])).to.equal(verifiedProjectName);
@@ -214,8 +218,8 @@ describe("Loan Contract -- Native Token", function () {
     });
 
     it("Should update the units of carbon for a Verified Project", async function () {
-      const { hardhatLoan, tokenId1, verifiedProjectName, verifiedProjectLink, verifiedProjectUnits, verifiedProjectGeographicIdentifier, _NYX_VERIFIED_PROJECT_UNITS } = await loadFixture(deployLoanFixture);
-      await hardhatLoan.addVerifiedProject(tokenId1, verifiedProjectName, verifiedProjectLink, verifiedProjectUnits, verifiedProjectGeographicIdentifier);
+      const { hardhatLoan, tokenId1, verifiedProjectName, verifiedProjectLink, verifiedProjectUnits, verifiedProjectGeographicIdentifier, verifiedProjectVerificationLink, _NYX_VERIFIED_PROJECT_UNITS } = await loadFixture(deployLoanFixture);
+      await hardhatLoan.addVerifiedProject(tokenId1, verifiedProjectName, verifiedProjectLink, verifiedProjectUnits, verifiedProjectGeographicIdentifier, verifiedProjectVerificationLink);
       
       expect(await hardhatLoan.updateVerifiedProjectElement(tokenId1, 0, _NYX_VERIFIED_PROJECT_UNITS, ethers.toBeArray(BigInt(250))))
         .to.emit(hardhatLoan, "ProjectElementUpdated")
@@ -229,9 +233,9 @@ describe("Loan Contract -- Native Token", function () {
     });
 
     it("Should update the project name for a Verified Project", async function () {
-      const { hardhatLoan, tokenId1, verifiedProjectName, verifiedProjectLink, verifiedProjectUnits, verifiedProjectGeographicIdentifier, _NYX_VERIFIED_PROJECT_NAMES } = await loadFixture(deployLoanFixture);
+      const { hardhatLoan, tokenId1, verifiedProjectName, verifiedProjectLink, verifiedProjectUnits, verifiedProjectGeographicIdentifier, verifiedProjectVerificationLink, _NYX_VERIFIED_PROJECT_NAMES } = await loadFixture(deployLoanFixture);
       const newProjectName = "Remove Carbon 1";
-      await hardhatLoan.addVerifiedProject(tokenId1, verifiedProjectName, verifiedProjectLink, verifiedProjectUnits, verifiedProjectGeographicIdentifier);
+      await hardhatLoan.addVerifiedProject(tokenId1, verifiedProjectName, verifiedProjectLink, verifiedProjectUnits, verifiedProjectGeographicIdentifier, verifiedProjectVerificationLink);
       
       expect(await hardhatLoan.updateVerifiedProjectElement(tokenId1, 0, _NYX_VERIFIED_PROJECT_NAMES, ethers.toUtf8Bytes(newProjectName)))
         .to.emit(hardhatLoan, "ProjectElementUpdated")

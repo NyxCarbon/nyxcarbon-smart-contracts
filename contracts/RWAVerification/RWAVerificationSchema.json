@@ -26,5 +26,12 @@
         "keyType": "Singleton",
         "valueType": "string",
         "valueContent": "String"
+    },
+    {
+        "name": "RWAVLink",
+        "key": "0x3ab348a731997f9232da1e61a5775086d784d072086f52cd41d4214d2147ae87",
+        "keyType": "Singleton",
+        "valueType": "string",
+        "valueContent": "String"
     }
 ]

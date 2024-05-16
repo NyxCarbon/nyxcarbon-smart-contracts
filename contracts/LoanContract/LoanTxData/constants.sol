@@ -57,5 +57,8 @@ bytes32 constant _NYX_VERIFIED_PROJECT_UNITS = 0xecce39cdb4f559d5ed120e7490f76f8
 // keccak256('NYXVerifiedProjectGeographicIdentifiers[]')
 bytes32 constant _NYX_VERIFIED_PROJECT_GEOGRAPHIC_IDENTIFIERS = 0x438b3966c6fb3629949c4fd713334177cc151dfe49ac8ba2299b272e333c02eb;
 
+// keccak256('NYXVerifiedProjectVerificationLinks[]')
+bytes32 constant _NYX_VERIFIED_PROJECT_VERIFICATION_LINKS = 0x6c1718525d902c3fbc20ecfb1209acee0fb762f9b0c0b2f6d1814c4627909110;
+
 // keccak256('NYXRWAVTokenIds[]')
 bytes32 constant _NYX_RWAV_TOKEN_IDS = 0xba1f03024321f3ad3b300da5bb81752d0d48af59fad2cffe7998d67440912c7c;

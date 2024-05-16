@@ -12,7 +12,7 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 // constants
-import {_NYX_INITIAL_LOAN_AMOUNT, _NYX_LOAN_APY, _NYX_AMORITIZATION_PERIOD, _NYX_GRACE_PERIOD, _NYX_TRANSACTION_BPS, _NYX_TOKEN_ADDRESS, _NYX_LENDER, _NYX_BORROWER, _NYX_CARBON_CREDITS_STAKED, _NYX_CARBON_CREDITS_BALANCE, _NYX_CARBON_CREDITS_PRICE, _NYX_LOAN_BALANCE, _NYX_LOAN_STATUS, _NYX_PAYMENT_INDEX, _NYX_VERIFIED_PROJECT_NAMES, _NYX_VERIFIED_PROJECT_LINKS, _NYX_VERIFIED_PROJECT_UNITS, _NYX_VERIFIED_PROJECT_GEOGRAPHIC_IDENTIFIERS, _NYX_RWAV_TOKEN_IDS} from "../LoanTxData/constants.sol";
+import {_NYX_INITIAL_LOAN_AMOUNT, _NYX_LOAN_APY, _NYX_AMORITIZATION_PERIOD, _NYX_GRACE_PERIOD, _NYX_TRANSACTION_BPS, _NYX_TOKEN_ADDRESS, _NYX_LENDER, _NYX_BORROWER, _NYX_CARBON_CREDITS_STAKED, _NYX_CARBON_CREDITS_BALANCE, _NYX_CARBON_CREDITS_PRICE, _NYX_LOAN_BALANCE, _NYX_LOAN_STATUS, _NYX_PAYMENT_INDEX, _NYX_VERIFIED_PROJECT_NAMES, _NYX_VERIFIED_PROJECT_LINKS, _NYX_VERIFIED_PROJECT_UNITS, _NYX_VERIFIED_PROJECT_GEOGRAPHIC_IDENTIFIERS, _NYX_VERIFIED_PROJECT_VERIFICATION_LINKS, _NYX_RWAV_TOKEN_IDS} from "../LoanTxData/constants.sol";
 
 contract LYXLoanContractSimple is ILYXLoanContractSimple, Ownable {
     using Counters for Counters.Counter;
@@ -166,7 +166,8 @@ contract LYXLoanContractSimple is ILYXLoanContractSimple, Ownable {
         string memory projectName,
         string memory projectLink,
         uint256 units,
-        string memory geographicIdentifier
+        string memory geographicIdentifier,
+        string memory verificationLink
     ) public onlyOwner {
         // NOTE: array lengths should be consistent across project names, project links, and units arrays
         // Get the array length for the project names array
@@ -197,11 +198,17 @@ contract LYXLoanContractSimple is ILYXLoanContractSimple, Ownable {
             arrayLength
         );
 
+        bytes32 verificationLinkIndexKey = createLSP2ArrayIndexKey(
+            _NYX_VERIFIED_PROJECT_VERIFICATION_LINKS,
+            arrayLength
+        );
+
         emit ProjectAdded(
             projectName,
             projectLink,
             units,
             geographicIdentifier,
+            verificationLink,
             arrayLength
         );
 
@@ -228,6 +235,12 @@ contract LYXLoanContractSimple is ILYXLoanContractSimple, Ownable {
             bytes32(tokenId),
             geographicIdentifierIndexKey,
             bytes(geographicIdentifier)
+        );
+
+        loanTxData.setDataForTokenId(
+            bytes32(tokenId),
+            verificationLinkIndexKey,
+            bytes(verificationLink)
         );
 
         // Increment the array length for the new project
@@ -257,6 +270,12 @@ contract LYXLoanContractSimple is ILYXLoanContractSimple, Ownable {
             _NYX_VERIFIED_PROJECT_GEOGRAPHIC_IDENTIFIERS,
             abi.encode(arrayLength)
         );
+
+        loanTxData.setDataForTokenId(
+            bytes32(tokenId),
+            _NYX_VERIFIED_PROJECT_VERIFICATION_LINKS,
+            abi.encode(arrayLength)
+        );
     }
 
     function getVerifiedProject(
@@ -283,18 +302,25 @@ contract LYXLoanContractSimple is ILYXLoanContractSimple, Ownable {
             arrayIndex
         );
 
-        bytes32[] memory tokenIds = new bytes32[](4);
-        bytes32[] memory dataKeys = new bytes32[](4);
+        bytes32 verificationLinkIndexKey = createLSP2ArrayIndexKey(
+            _NYX_VERIFIED_PROJECT_VERIFICATION_LINKS,
+            arrayIndex
+        );
+
+        bytes32[] memory tokenIds = new bytes32[](5);
+        bytes32[] memory dataKeys = new bytes32[](5);
 
         tokenIds[0] = bytes32(tokenId);
         tokenIds[1] = bytes32(tokenId);
         tokenIds[2] = bytes32(tokenId);
         tokenIds[3] = bytes32(tokenId);
+        tokenIds[4] = bytes32(tokenId);
 
         dataKeys[0] = projectNameIndexKey;
         dataKeys[1] = projectLinkIndexKey;
         dataKeys[2] = unitsIndexKey;
         dataKeys[3] = geographicIdentifierIndexKey;
+        dataKeys[4] = verificationLinkIndexKey;
 
         bytes[] memory data = loanTxData.getDataBatchForTokenIds(
             tokenIds,
@@ -490,11 +516,11 @@ contract LYXLoanContractSimple is ILYXLoanContractSimple, Ownable {
         );
         uint128 arrayLength = abi.decode(arrayLengthData, (uint128));
         if (arrayLength > 0) {
-            mintCarbonCreditNFTs(tokenId, arrayLength, lender);
+            mintNFTs(tokenId, arrayLength, lender);
         }
     }
 
-    function mintCarbonCreditNFTs(
+    function mintNFTs(
         uint256 tokenId,
         uint128 arrayLength,
         address lender
@@ -521,6 +547,11 @@ contract LYXLoanContractSimple is ILYXLoanContractSimple, Ownable {
                 i
             );
 
+            bytes32 verificationLinkIndexKey = createLSP2ArrayIndexKey(
+                _NYX_VERIFIED_PROJECT_VERIFICATION_LINKS,
+                i
+            );
+
             bytes memory projectName = loanTxData.getDataForTokenId(
                 bytes32(tokenId),
                 projectNameIndexKey
@@ -539,13 +570,19 @@ contract LYXLoanContractSimple is ILYXLoanContractSimple, Ownable {
                 geographicIdentifierIndexKey
             );
 
+            bytes memory verificationLink = loanTxData.getDataForTokenId(
+                bytes32(tokenId),
+                verificationLinkIndexKey
+            );
+
             if (abi.decode(units, (uint256)) > 0) {
                 uint256 mintedTokenId = rwaVerification.mintNFT(
                     lender,
                     string(projectName),
                     string(projectLink),
                     abi.decode(units, (uint256)),
-                    string(geographicIdentifier)
+                    string(geographicIdentifier),
+                    string(verificationLink)
                 );
 
                 // Store the minted token ID in the loan NFT metadata
